@@ -22,9 +22,9 @@ services:
             - traefik.http.routers.traefik.rule=Host(`traefik.localhost`)
             - traefik.http.services.traefik.loadBalancer.server.port=80
 
-    api:
+    herman-team-api:
         build:
-            context: api/docker
+            context: docker
             dockerfile: development/nginx/Dockerfile
         volumes:
             - ./api:/app:rw
@@ -40,112 +40,18 @@ services:
 
     api-php-fpm:
         build:
-            context: api/docker
+            context: docker
             dockerfile: development/php-fpm/Dockerfile
         volumes:
             - ./api:/app:rw
 
+
     api-php-cli:
         build:
-            context: api/docker
+            context: docker
             dockerfile: development/php-cli/Dockerfile
         volumes:
             - ./api:/app:rw
-
-    react-node:
-        build:
-            context: react/docker/development/node
-        environment:
-            WDS_SOCKET_PORT: 0
-            NODE_ENV: development
-            REACT_APP_API_URL: http://api.localhost/api
-            REACT_APP_API_VER: v1
-            REACT_APP_AVATARS: http://storage.localhost/pet/avatars
-        volumes:
-            - ./react:/app:rw
-        command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && yarn start"
-        tty: true
-
-    react-node-cli:
-        build:
-            context: react/docker/development/node
-        volumes:
-            - ./react:/app
-
-    react:
-        build:
-            context: react/docker/development/nginx
-        networks:
-            - traefik-public
-            - default
-        labels:
-            - traefik.enable=true
-            - traefik.docker.network=traefik-public
-            - traefik.http.routers.react.entrypoints=http
-            - traefik.http.routers.react.rule=Host(`react.localhost`) || Host(`www.react.localhost`)
-            - traefik.http.services.react.loadBalancer.server.port=80
-
-    underdante-node:
-        build:
-            context: underdante/docker/development/node
-        environment:
-            WDS_SOCKET_PORT: 0
-            NODE_ENV: development
-            REACT_APP_API_URL: http://api.localhost/api
-            REACT_APP_API_VER: v1
-            REACT_APP_AVATARS: http://storage.localhost/pet/avatars
-        volumes:
-            - ./underdante:/app:rw
-        command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && yarn start"
-        tty: true
-
-    underdante-node-cli:
-        build:
-            context: underdante/docker/development/node
-        volumes:
-            - ./underdante:/app
-
-    underdante:
-        build:
-            context: underdante/docker/development/nginx
-        networks:
-            - traefik-public
-            - default
-        labels:
-            - traefik.enable=true
-            - traefik.docker.network=traefik-public
-            - traefik.http.routers.underdante.entrypoints=http
-            - traefik.http.routers.underdante.rule=Host(`underdante.localhost`) || Host(`www.underdante.localhost`)
-            - traefik.http.services.underdante.loadBalancer.server.port=80
-
-    vue-node:
-        build:
-            context: vue/docker/development/node
-        volumes:
-            - ./vue:/app:rw
-        command: sh -c "until [ -f .ready ] ; do sleep 1 ; done && npm run dev"
-        tty: true
-
-    vue-node-cli:
-        build:
-            context: vue/docker/development/node
-        volumes:
-            - ./vue:/app
-
-    vue:
-        build:
-            context: vue/docker/development/nginx
-        volumes:
-            - ./vue:/app:rw
-        networks:
-            - traefik-public
-            - default
-        labels:
-            - traefik.enable=true
-            - traefik.docker.network=traefik-public
-            - traefik.http.routers.vue.entrypoints=http
-            - traefik.http.routers.vue.rule=Host(`vue.localhost`) || Host(`www.vue.localhost`)
-            - traefik.http.services.vue.loadBalancer.server.port=80
 
     api-postgres:
         image: postgres:13.3-alpine
@@ -196,19 +102,8 @@ services:
             minio:
                 condition: service_healthy
         restart: on-failure
-        entrypoint: /bin/sh -c "/usr/bin/mc alias set myminio http://minio:9000 local secret123456 && /usr/bin/mc mb myminio/pet && /usr/bin/mc anonymous set download myminio/pet"
-        networks:
-            - traefik-public
-            - default
+        entrypoint: /bin/sh -c "/usr/bin/mc alias set myminio http://minio:9000 local dockersecret123456 && /usr/bin/mc mb myminio/pet && /usr/bin/mc anonymous set download myminio/pet"
 
-    cucumber-node-cli:
-        build:
-            context: e2e/docker/development/node
-        volumes:
-            - ./e2e:/app
-        depends_on:
-            - traefik
-        network_mode: container:traefik
 
 volumes:
     api-postgres:
@@ -216,4 +111,4 @@ volumes:
 
 networks:
     traefik-public:
-        name: traefik-public
+        external: true
