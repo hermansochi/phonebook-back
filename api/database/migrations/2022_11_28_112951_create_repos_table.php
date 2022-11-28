@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('repos', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('github_user_id');
-            $table->biginteger('github_id')->nullable();
+            $table->biginteger('github_id');
             $table->string('name')->nullable();
             $table->string('full_name')->nullable();
             $table->boolean('private')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->boolean('fork')->nullable();
             $table->string('homepage')->nullable();
-            $table->biginteger('size')->nullable();
+            $table->integer('size')->nullable();
             $table->integer('stargazers_count')->nullable();
             $table->integer('watchers_count')->nullable();
             $table->integer('forks')->nullable();

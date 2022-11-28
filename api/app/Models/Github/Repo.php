@@ -12,7 +12,7 @@ class Repo extends Model
 
     protected $fillable = [
     'id',
-    'github_user_id'.
+    'github_user_id',
     'github_id',
     'name',
     'full_name',

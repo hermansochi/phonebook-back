@@ -213,7 +213,7 @@ class GetGithubInfo extends Command
                 //dd($repo['id']);
                 $res = $githubUser->repos()->create(
                     [
-                        'github_id' => 111,
+                        'github_id' => $repo['id'],
                     //],
                     //[
                         //$table->uuid('id')->primary();
