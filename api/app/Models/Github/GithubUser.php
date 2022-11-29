@@ -8,17 +8,19 @@ use App\Traits\Uuids;
 
 class GithubUser extends Model
 {
-    use HasFactory, UUids;
+    use HasFactory, Uuids;
 
     protected $fillable = [
         'id',
         'role',
+        'login',
         'github_id',
         'avatar_url',
         'url',
         'html_url',
         'repos_url',
         'type',
+        'site_admin',
         'name',
         'company',
         'blog',
@@ -37,4 +39,5 @@ class GithubUser extends Model
     {
         return $this->hasMany(Repo::class);
     }
+
 }

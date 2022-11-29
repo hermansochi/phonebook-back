@@ -23,6 +23,13 @@ class GetGithubInfo extends Command
     protected $description = 'Command description';
 
     /**
+     * Guthub api bearer.
+     *
+     * @var string
+     */
+    protected string $bearer;
+
+    /**
      * Execute the console command.
      *
      * @return int
@@ -30,86 +37,53 @@ class GetGithubInfo extends Command
     public function handle(): int
     {
         $client = new \GuzzleHttp\Client();
-        $bearer = config('app.github_bearer');
-        $entryPoint = $this->getGithubEndpointInfo('https://api.github.com/users/hermansochi', $bearer);
+        $this->bearer = config('app.github_bearer');
 
-        dd($entryPoint);
+        $entryPoint = $this->getGithubEndpointInfo('https://api.github.com/users/hermansochi', $this->bearer);
 
-        if($entryPoint['StatusCode'] !== 200) {
-            $this->error('StatusCode: ' . $entryPoint['StatusCode'] );
+        $this->line('Get entrypoint info.');
+
+        if($entryPoint['headers']['StatusCode'] !== 200) {
+            $this->error('StatusCode: ' . $entryPoint['headers']['StatusCode'] );
             return Command::FAILURE;
         }
 
-        $githubUser = $this->saveGithubUsersToBD($entryPoint, 'root_user');
-
-        $this->line('User ID: ' . $githubUser->github_id .
+        $this->line('Save entrypoint info to BD.');
+        $githubUser = $this->saveGithubUserToBD($entryPoint['body'], 'root_user');
+        $this->line('   ID: ' . $githubUser->github_id .
                     ' User name: ' . $githubUser->name .
-                    ' Repos url: ' . $githubUser->repos_url);
-        $repos = $this->getGithubEndpointInfo($githubUser->repos_url, $bearer);
+                    ' Repos url: ' . $githubUser->repos_url .
+                    (($githubUser->wasRecentlyCreated) ? ' created.' : ' updated.')
+                );
 
-        $reposResult = $this->saveGithubUserReposToBD($githubUser->id, $repos);
-        dd($reposResult);
+        $this->line('Get repos info.');
+        $page = 1;
+        $per_page = 100;
 
-        $response = $client->request('GET', $obj->repos_url);
-        $this->info('StatusCode: ' . $response->getStatusCode());
-        $this->info('ContentType: ' . $response->getHeaderLine('content-type'));
-        $this->info('X-ratelimit-limit: ' . $response->getHeaderLine('x-ratelimit-limit'));
-        $this->info('X-ratelimit-remaining: ' . $response->getHeaderLine('x-ratelimit-remaining'));
-        $this->info('X-ratelimit-used: ' . $response->getHeaderLine('x-ratelimit-used'));
-        $epoch = $response->getHeaderLine('x-ratelimit-reset');
-        $dt = new \DateTime("@$epoch");
-        $this->info('X-ratelimit-reset: ' . $dt->format('Y-m-d H:i:s'));
-        $body = $response->getBody();
-
-        $obj = json_decode($body);
-
-        foreach ($obj as $item) {
-            $this->line('Repo id: ' . $item->id . ' ' . $item->full_name . ' Created at: ' . $item->created_at . ' Updated at: ' . $item->updated_at . ' Pushed at: ' . $item->pushed_at . ' Description: ' . $item->description);
-            $response = $client->request('GET', 'https://api.github.com/repos/' . $item->full_name .'/collaborators', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $bearer
-                ]
-            ]);
-
-            $this->info('StatusCode: ' . $response->getStatusCode());
-            $this->info('ContentType: ' . $response->getHeaderLine('content-type'));
-            $this->info('X-ratelimit-limit: ' . $response->getHeaderLine('x-ratelimit-limit'));
-            $this->info('X-ratelimit-remaining: ' . $response->getHeaderLine('x-ratelimit-remaining'));
-            $this->info('X-ratelimit-used: ' . $response->getHeaderLine('x-ratelimit-used'));
-            $epoch = $response->getHeaderLine('x-ratelimit-reset');
-            $dt = new \DateTime("@$epoch");
-            $this->info('X-ratelimit-reset: ' . $dt->format('Y-m-d H:i:s'));
-
-            $collaborators = json_decode($response->getBody());
-            //dd($response, $obj);
-            foreach ($collaborators as $collaborator) {
-                $this->line('    collaborator: ' . $collaborator->id . ' ' . $collaborator->login);
+        do {
+            $repos = $this->getGithubEndpointInfo($githubUser->repos_url, $this->bearer, $page, $per_page);
+            if($repos['headers']['StatusCode'] !== 200) {
+                $this->error('StatusCode: ' . $repos['headers']['StatusCode'] );
+                return Command::FAILURE;
             }
 
-            $response = $client->request('GET', 'https://api.github.com/repos/' . $item->full_name .'/contributors', [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $bearer
-                ]
-            ]);
-
-            
-            $this->info('StatusCode: ' . $response->getStatusCode());
-            $this->info('ContentType: ' . $response->getHeaderLine('content-type'));
-            $this->info('X-ratelimit-limit: ' . $response->getHeaderLine('x-ratelimit-limit'));
-            $this->info('X-ratelimit-remaining: ' . $response->getHeaderLine('x-ratelimit-remaining'));
-            $this->info('X-ratelimit-used: ' . $response->getHeaderLine('x-ratelimit-used'));
-            $epoch = $response->getHeaderLine('x-ratelimit-reset');
-            $dt = new \DateTime("@$epoch");
-            $this->info('X-ratelimit-reset: ' . $dt->format('Y-m-d H:i:s'));
-
-            $contributors = json_decode($response->getBody());
-            //dd($response, $obj);
-            foreach ($contributors as $contributor) {
-                $this->line('    contributor: ' . $contributor->id . ' ' . $contributor->login);
-                if ($contributor->login == 'hermansochi') { dd($contributor); }
+            if ($repos['headers']['X-ratelimit-remaining'] > 0) {
+                $this->info('X-ratelimit-remaining: ' . $repos['headers']['X-ratelimit-remaining']);
+            } else {
+                $this->error('X-ratelimit-remaining: ' . $repos['headers']['X-ratelimit-remaining']);
+                return Command::FAILURE;
             }
+    
+            $this->line('Save ' . count($repos['body']) . ' repos record to BD.');
+            $ret = $this->saveGithubUserReposToBD($githubUser->id, $repos['body']);
+            if ($ret === Command::FAILURE) {
+                return Command::FAILURE;
+            }
+            $page++;
 
-        }
+            //Save collaborators for each repo
+            //Save commit info for each repo
+        } while (count($repos['body']) === $per_page);
 
         //dd($obj);
         return Command::SUCCESS;
@@ -137,14 +111,16 @@ class GetGithubInfo extends Command
             'headers' => [
                 'Accept' => 'application/vnd.github+json'
             ],
-            'query' => [
-                'page' => $page,
-                'per_page' => $per_page
-            ]
         ];
         
         if (!is_null($bearer)) {
             $headers['headers']['Authorization'] = 'Bearer ' . $bearer;
+        }
+        if ($page !== 1) {
+            $headers['query']['page'] = $page;
+        }
+        if ($per_page !== 30) {
+            $headers['query']['per_page'] = $per_page;
         }
         $response = $client->request('GET', $url, $headers);
         $headers = [
@@ -167,37 +143,39 @@ class GetGithubInfo extends Command
     /**
      * Save info from my github to BD.
      * 
-     * @param array $collaborator
+     * @param array $githubUser
      * @param string $userRole
      * @return GithubUser
      */
-    private function saveGithubUsersToBD(array $collaborator, string $userRole): GithubUser
+    private function saveGithubUserToBD(array $githubUser, string $userRole): GithubUser
     {
         $res = GithubUser::updateOrCreate(
             [
-                'github_id' => $collaborator['id']
+                'github_id' => $githubUser['id']
             ],
             [
                 //$table->uuid('id')->primary();
                 //$table->biginteger('github_id');
                 'role' => $userRole,
-                'avatar_url' => $collaborator['avatar_url'],
-                'url' => $collaborator['url'],
-                'html_url' => $collaborator['html_url'],
-                'repos_url' => $collaborator['repos_url'],
-                'type' => $collaborator['type'],
-                'name' => $collaborator['name'],
-                'company' => $collaborator['company'],
-                'blog' => $collaborator['blog'],
-                'location' => $collaborator['location'],
-                'email' => $collaborator['email'],
-                'hireable' => $collaborator['hireable'],
-                'public_repos' => $collaborator['public_repos'],
-                'public_gists' => $collaborator['public_gists'],
-                'followers' => $collaborator['followers'],
-                'following' => $collaborator['following'],
-                'github_created_at' => $collaborator['created_at'],
-                'github_updated_at' => $collaborator['updated_at'],
+                'login' => $githubUser['login'],
+                'avatar_url' => $githubUser['avatar_url'],
+                'url' => $githubUser['url'],
+                'html_url' => $githubUser['html_url'],
+                'repos_url' => $githubUser['repos_url'],
+                'type' => $githubUser['type'],
+                'site_admin' => $githubUser['site_admin'],
+                'name' => $githubUser['name'],
+                'company' => $githubUser['company'],
+                'blog' => $githubUser['blog'],
+                'location' => $githubUser['location'],
+                'email' => $githubUser['email'],
+                'hireable' => $githubUser['hireable'],
+                'public_repos' => $githubUser['public_repos'],
+                'public_gists' => $githubUser['public_gists'],
+                'followers' => $githubUser['followers'],
+                'following' => $githubUser['following'],
+                'github_created_at' => $githubUser['created_at'],
+                'github_updated_at' => $githubUser['updated_at'],
 
             ]
         );
@@ -210,64 +188,154 @@ class GetGithubInfo extends Command
      * 
      * @param string $uuid
      * @param array $repos
-     * @return boolean
+     * @return int
      */
-    private function saveGithubUserReposToBD(string $uuid, array $repos): bool
+    private function saveGithubUserReposToBD(string $uuid, array $repos): int
+    {
+        foreach ($repos as $repo) {
+            $this->line('   Repo ID: ' . $repo['id'] . ' repo name: ' . $repo['name']);
+            $githubUser =  GithubUser::find($uuid);
+            $res = $githubUser->repos()->updateOrCreate(
+                [
+                    'github_id' => $repo['id'],
+                ],
+                [
+                    //$table->uuid('id')->primary();
+                    //$table->biginteger('github_id');
+
+                    //'github_id' => $repo['id'],
+                    'name' => $repo['name'],
+                    'full_name' => $repo['full_name'],
+                    'private' => $repo['private'],
+                    'url' => $repo['url'],
+                    'html_url' => $repo['html_url'],
+                    'description' => $repo['description'],
+                    'fork' => $repo['fork'],
+                    'homepage' => $repo['homepage'],
+                    'size' => $repo['size'],
+                    'stargazers_count' => $repo['stargazers_count'],
+                    'watchers_count' => $repo['watchers_count'],
+                    'forks' => $repo['forks'],
+                    'forks_count' => $repo['forks_count'],
+                    'open_issues' => $repo['open_issues'],
+                    'open_issues_count' => $repo['open_issues_count'],
+                    'watchers' => $repo['watchers'],
+                    'language' => $repo['language'],
+                    'has_issues' => $repo['has_issues'],
+                    'has_projects' => $repo['has_projects'],
+                    'has_downloads' => $repo['has_downloads'],
+                    'has_wiki' => $repo['has_wiki'],
+                    'has_pages' => $repo['has_pages'],
+                    'has_discussions' => $repo['has_discussions'],
+                    'is_template' => $repo['is_template'],
+                    'mirror_url' => $repo['mirror_url'],
+                    'archived' => $repo['archived'],
+                    'disabled' => $repo['disabled'],
+                    'allow_forking' => $repo['allow_forking'],
+                    'visibility' => $repo['visibility'],
+                    'default_branch' => $repo['default_branch'],
+                    'github_created_at' => $repo['created_at'],
+                    'github_updated_at' => $repo['updated_at'],
+                    'github_pushed_at'  => $repo['pushed_at']
+                ]
+            );
+
+            //Save contributors for each repo
+            $contributor_page = 1;
+            $contributor_per_page = 100;
+            do {
+                $contributors = $this->getGithubEndpointInfo(
+                    $repo['contributors_url'],
+                    $this->bearer,
+                    $contributor_page,
+                    $contributor_per_page
+                );
+                if($contributors['headers']['StatusCode'] !== 200) {
+                    $this->error('StatusCode: ' . $contributors['headers']['StatusCode'] );
+                    return Command::FAILURE;
+                }
+    
+                if ($contributors['headers']['X-ratelimit-remaining'] > 0) {
+                    $this->info('   X-ratelimit-remaining: ' .
+                        $contributors['headers']['X-ratelimit-remaining']);
+                } else {
+                    $this->error('   X-ratelimit-remaining: ' .
+                        $contributors['headers']['X-ratelimit-remaining']);
+                    return Command::FAILURE;
+                }
+
+                $this->line('      Save ' . count($contributors['body']) . ' contributors record to BD.');
+                $this->saveRepoContributorsToBD($repo['id'], $contributors['body']);
+
+                $contributor_page++;
+            } while (count($contributors['body']) === $contributor_per_page);
+/*
+            //Save collaborators for each repo
+            $contributor_page = 1;
+            $contributor_per_page = 100;
+            do {
+                $contributors = $this->getGithubEndpointInfo(
+                    $repo['contributors_url'],
+                    $this->bearer,
+                    $contributor_page,
+                    $contributor_per_page
+                );
+                if($contributors['headers']['StatusCode'] !== 200) {
+                    $this->error('StatusCode: ' . $contributors['headers']['StatusCode'] );
+                    return Command::FAILURE;
+                }
+    
+                if ($contributors['headers']['X-ratelimit-remaining'] > 0) {
+                    $this->info('   X-ratelimit-remaining: ' .
+                        $contributors['headers']['X-ratelimit-remaining']);
+                } else {
+                    $this->error('   X-ratelimit-remaining: ' .
+                        $contributors['headers']['X-ratelimit-remaining']);
+                    return Command::FAILURE;
+                }
+
+                $this->line('      Save ' . count($contributors['body']) . ' contributors record to BD.');
+                $this->saveRepoContributorsToBD($uuid, $contributors['body']);
+
+                $contributor_page++;
+            } while (count($contributors['body']) === $contributor_per_page);
+            */
+        }
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Save info from my github to BD.
+     * 
+     * @param string $repoId
+     * @param array $contributors
+     * @return void
+     */
+    private function saveRepoContributorsToBD(string $repoId, array $contributors): void
     {
         
-        foreach ($repos as $repo) {
-            if (gettype($repo) === 'array') {
-                $this->line($repo['id']);
-                $this->line($repo['name']);
-                $githubUser =  GithubUser::find($uuid);
-                //dd($repo['id']);
-                $res = $githubUser->repos()->updateOrCreate(
-                    [
-                        'github_id' => $repo['id'],
-                    ],
-                    [
-                        //$table->uuid('id')->primary();
-                        //$table->biginteger('github_id');
+        foreach ($contributors as $contributor) {
+            $this->line(
+                '      contributor ID: ' . $contributor['id'] .
+                ' contributor login: ' . $contributor['login']
+            );
+            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $res = $repo->contributors()->updateOrCreate(
+                [
+                    'github_id' => $contributor['id'],
+                ],
+                [
+                    'login' => $contributor['login'],
+                    'avatar_url' => $contributor['avatar_url'],
+                    'url' => $contributor['url'],
+                    'html_url' => $contributor['html_url'],
+                    'repos_url' => $contributor['repos_url'],
+                    'type' => $contributor['type'],
+                    'site_admin' => $contributor['site_admin'],
+                    'contributions' => $contributor['contributions']
+                ]
+            );
 
-                        //'github_id' => $repo['id'],
-                        'name' => $repo['name'],
-                        'full_name' => $repo['full_name'],
-                        'private' => $repo['private'],
-                        'url' => $repo['url'],
-                        'html_url' => $repo['html_url'],
-                        'description' => $repo['description'],
-                        'fork' => $repo['fork'],
-                        'homepage' => $repo['homepage'],
-                        'size' => $repo['size'],
-                        'stargazers_count' => $repo['stargazers_count'],
-                        'watchers_count' => $repo['watchers_count'],
-                        'forks' => $repo['forks'],
-                        'forks_count' => $repo['forks_count'],
-                        'open_issues' => $repo['open_issues'],
-                        'open_issues_count' => $repo['open_issues_count'],
-                        'watchers' => $repo['watchers'],
-                        'language' => $repo['language'],
-                        'has_issues' => $repo['has_issues'],
-                        'has_projects' => $repo['has_projects'],
-                        'has_downloads' => $repo['has_downloads'],
-                        'has_wiki' => $repo['has_wiki'],
-                        'has_pages' => $repo['has_pages'],
-                        'has_discussions' => $repo['has_discussions'],
-                        'is_template' => $repo['is_template'],
-                        'mirror_url' => $repo['mirror_url'],
-                        'archived' => $repo['archived'],
-                        'disabled' => $repo['disabled'],
-                        'allow_forking' => $repo['allow_forking'],
-                        'visibility' => $repo['visibility'],
-                        'default_branch' => $repo['default_branch'],
-                        'github_created_at' => $repo['created_at'],
-                        'github_updated_at' => $repo['updated_at'],
-                        'github_pushed_at'  => $repo['pushed_at']
-                    ]
-                );
-            }
         }
-
-        return true;
     }
 }

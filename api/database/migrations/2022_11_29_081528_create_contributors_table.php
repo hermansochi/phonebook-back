@@ -13,29 +13,18 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('github_users', function (Blueprint $table) {
+        Schema::create('contributors', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('role');
-            $table->string('login');
+            $table->uuid('repo_id');
             $table->biginteger('github_id');
+            $table->string('login')->nullable();
             $table->string('avatar_url')->nullable();
             $table->string('url')->nullable();
             $table->string('html_url')->nullable();
             $table->string('repos_url')->nullable();
             $table->string('type')->nullable();
             $table->boolean('site_admin')->nullable();
-            $table->string('name')->nullable();
-            $table->string('company')->nullable();
-            $table->string('blog')->nullable();
-            $table->string('location')->nullable();
-            $table->string('email')->nullable();
-            $table->string('hireable')->nullable();
-            $table->integer('public_repos')->nullable();
-            $table->integer('public_gists')->nullable();
-            $table->integer('followers')->nullable();
-            $table->integer('following')->nullable();
-            $table->timestamp('github_created_at');
-            $table->timestamp('github_updated_at');
+            $table->integer('contributions')->nullable();
             $table->timestamps();
         });
     }
@@ -47,6 +36,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('github_users');
+        Schema::dropIfExists('contributors');
     }
 };
