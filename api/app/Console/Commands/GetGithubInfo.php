@@ -30,8 +30,10 @@ class GetGithubInfo extends Command
     public function handle(): int
     {
         $client = new \GuzzleHttp\Client();
-        $bearer = config('github_bearer');
+        $bearer = config('app.github_bearer');
         $entryPoint = $this->getGithubEndpointInfo('https://api.github.com/users/hermansochi', $bearer);
+
+        dd($entryPoint);
 
         if($entryPoint['StatusCode'] !== 200) {
             $this->error('StatusCode: ' . $entryPoint['StatusCode'] );
@@ -65,7 +67,7 @@ class GetGithubInfo extends Command
             $this->line('Repo id: ' . $item->id . ' ' . $item->full_name . ' Created at: ' . $item->created_at . ' Updated at: ' . $item->updated_at . ' Pushed at: ' . $item->pushed_at . ' Description: ' . $item->description);
             $response = $client->request('GET', 'https://api.github.com/repos/' . $item->full_name .'/collaborators', [
                 'headers' => [
-                    'Authorization' => 'Bearer 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'
+                    'Authorization' => 'Bearer ' . $bearer
                 ]
             ]);
 
@@ -86,7 +88,7 @@ class GetGithubInfo extends Command
 
             $response = $client->request('GET', 'https://api.github.com/repos/' . $item->full_name .'/contributors', [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . config('github_bearer')
+                    'Authorization' => 'Bearer ' . $bearer
                 ]
             ]);
 
@@ -118,28 +120,33 @@ class GetGithubInfo extends Command
      * 
      * @param string $url
      * @param string $bearer
+     * @param int $page
+     * @param int $per_page
      * @return array
      */
-    private function getGithubEndpointInfo(string $url, string $bearer = null): array
+    private function getGithubEndpointInfo(
+        string $url,
+        string $bearer = null,
+        int $page = 1,
+        int $per_page = 30
+        ): array
     {
+        
         $client = new \GuzzleHttp\Client();
-        if (is_null($bearer)) {
-            $headers = [
-                'headers' => [
-                    'Accept' => 'application/vnd.github+json'
-                ]
-            ];
-        } else {
-            $headers = [
-                'headers' => [
-                    'Accept' => 'application/vnd.github+json',
-                    'Authorization' => 'Bearer ' . $bearer
-                ]
-            ];
+        $headers = [
+            'headers' => [
+                'Accept' => 'application/vnd.github+json'
+            ],
+            'query' => [
+                'page' => $page,
+                'per_page' => $per_page
+            ]
+        ];
+        
+        if (!is_null($bearer)) {
+            $headers['headers']['Authorization'] = 'Bearer ' . $bearer;
         }
-
         $response = $client->request('GET', $url, $headers);
-
         $headers = [
             'StatusCode' => $response->getStatusCode(),
             'ContentType' => $response->getHeaderLine('content-type'),
@@ -151,7 +158,10 @@ class GetGithubInfo extends Command
         $dt = new \DateTime("@$epoch");
         $headers['X-ratelimit-reset'] = $dt->format('Y-m-d H:i:s');
 
-        return array_merge($headers, json_decode($response->getBody(), true));
+        return [
+            'headers' => $headers,
+            'body' => json_decode($response->getBody(), true)
+        ];
     }
 
     /**
@@ -211,11 +221,11 @@ class GetGithubInfo extends Command
                 $this->line($repo['name']);
                 $githubUser =  GithubUser::find($uuid);
                 //dd($repo['id']);
-                $res = $githubUser->repos()->create(
+                $res = $githubUser->repos()->updateOrCreate(
                     [
                         'github_id' => $repo['id'],
-                    //],
-                    //[
+                    ],
+                    [
                         //$table->uuid('id')->primary();
                         //$table->biginteger('github_id');
 
