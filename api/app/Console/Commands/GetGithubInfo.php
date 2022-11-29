@@ -209,8 +209,8 @@ class GetGithubInfo extends Command
             $githubUser = GithubUser::find($uuid);
 
             if (!$this->option('force')) {
-                $previousPushDate = $githubUser->repos()
-                    ->where('github_id', '=', $repo['id'])->first()->github_pushed_at;
+                $previousPushDate = (new \Carbon\Carbon($githubUser->repos()
+                    ->where('github_id', '=', $repo['id'])->first()->github_pushed_at))->toIso8601String();
             } else {
                 $previousPushDate = null;
             }
@@ -319,12 +319,7 @@ class GetGithubInfo extends Command
             } while (count($collaborators['body']) === $collaborator_per_page);
 
             //Save commits for each repo
-            dump('$previousPushDate ' . (new \Carbon\Carbon($previousPushDate))->toIso8601String());
-            dump('$res->github_pushed_at '. (new \Carbon\Carbon($res->github_pushed_at))->toIso8601String());
-            if (
-                (new \Carbon\Carbon($previousPushDate))->toIso8601String() ===
-                (new \Carbon\Carbon($res->github_pushed_at))->toIso8601String()
-                ) {
+            if ($previousPushDate === (new \Carbon\Carbon($res->github_pushed_at))->toIso8601String()) {
                 $this->info('      No new push, skip commits loading.');
             } else {
                 $commit_page = 1;
@@ -335,7 +330,8 @@ class GetGithubInfo extends Command
                         $this->bearer,
                         NULL,
                         $commit_page,
-                        $commit_per_page
+                        $commit_per_page,
+                        $since = $previousPushDate
                     );
                     if($commits['headers']['StatusCode'] !== 200) {
                         $this->error('StatusCode: ' . $commits['headers']['StatusCode'] );
