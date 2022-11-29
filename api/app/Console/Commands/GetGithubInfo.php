@@ -13,17 +13,25 @@ class GetGithubInfo extends Command
      *
      * @var string
      */
-    protected $signature = 'github:test';
+    protected $signature = 'github:get {--force :  For full update commit history}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Get stats from github.';
 
     /**
-     * Guthub api bearer.
+     * Github api entrypoint.
+     *
+     * @var string
+     */
+    protected string $entrypoint;
+
+
+    /**
+     * Github api bearer.
      *
      * @var string
      */
@@ -38,8 +46,9 @@ class GetGithubInfo extends Command
     {
         $client = new \GuzzleHttp\Client();
         $this->bearer = config('app.github_bearer');
+        $this->entrypoint = config('app.github_entrypoint');
 
-        $entryPoint = $this->getGithubEndpointInfo('https://api.github.com/users/hermansochi', $this->bearer);
+        $entryPoint = $this->getGithubEndpointInfo($this->entrypoint, $this->bearer);
 
         $this->line('Get entrypoint info.');
 
@@ -61,7 +70,7 @@ class GetGithubInfo extends Command
         $per_page = 100;
 
         do {
-            $repos = $this->getGithubEndpointInfo($githubUser->repos_url, $this->bearer, $page, $per_page);
+            $repos = $this->getGithubEndpointInfo($githubUser->repos_url, $this->bearer, 'all', $page, $per_page);
             if($repos['headers']['StatusCode'] !== 200) {
                 $this->error('StatusCode: ' . $repos['headers']['StatusCode'] );
                 return Command::FAILURE;
@@ -80,9 +89,6 @@ class GetGithubInfo extends Command
                 return Command::FAILURE;
             }
             $page++;
-
-            //Save collaborators for each repo
-            //Save commit info for each repo
         } while (count($repos['body']) === $per_page);
 
         //dd($obj);
@@ -94,6 +100,7 @@ class GetGithubInfo extends Command
      * 
      * @param string $url
      * @param string $bearer
+     * @param string $type
      * @param int $page
      * @param int $per_page
      * @return array
@@ -101,8 +108,10 @@ class GetGithubInfo extends Command
     private function getGithubEndpointInfo(
         string $url,
         string $bearer = null,
+        string $type = null,
         int $page = 1,
-        int $per_page = 30
+        int $per_page = 30,
+        string $since = null,
         ): array
     {
         
@@ -121,6 +130,12 @@ class GetGithubInfo extends Command
         }
         if ($per_page !== 30) {
             $headers['query']['per_page'] = $per_page;
+        }
+        if (!is_null($type)) {
+            $headers['query']['type'] = $type;
+        }
+        if (!is_null($since)) {
+            $headers['query']['since'] = $since;
         }
         $response = $client->request('GET', $url, $headers);
         $headers = [
@@ -154,8 +169,6 @@ class GetGithubInfo extends Command
                 'github_id' => $githubUser['id']
             ],
             [
-                //$table->uuid('id')->primary();
-                //$table->biginteger('github_id');
                 'role' => $userRole,
                 'login' => $githubUser['login'],
                 'avatar_url' => $githubUser['avatar_url'],
@@ -179,7 +192,6 @@ class GetGithubInfo extends Command
 
             ]
         );
-
         return $res;
     }
 
@@ -194,16 +206,20 @@ class GetGithubInfo extends Command
     {
         foreach ($repos as $repo) {
             $this->line('   Repo ID: ' . $repo['id'] . ' repo name: ' . $repo['name']);
-            $githubUser =  GithubUser::find($uuid);
+            $githubUser = GithubUser::find($uuid);
+
+            if (!$this->option('force')) {
+                $previousPushDate = $githubUser->repos()
+                    ->where('github_id', '=', $repo['id'])->first()->github_pushed_at;
+            } else {
+                $previousPushDate = null;
+            }
+
             $res = $githubUser->repos()->updateOrCreate(
                 [
                     'github_id' => $repo['id'],
                 ],
                 [
-                    //$table->uuid('id')->primary();
-                    //$table->biginteger('github_id');
-
-                    //'github_id' => $repo['id'],
                     'name' => $repo['name'],
                     'full_name' => $repo['full_name'],
                     'private' => $repo['private'],
@@ -247,6 +263,7 @@ class GetGithubInfo extends Command
                 $contributors = $this->getGithubEndpointInfo(
                     $repo['contributors_url'],
                     $this->bearer,
+                    NULL,
                     $contributor_page,
                     $contributor_per_page
                 );
@@ -269,37 +286,77 @@ class GetGithubInfo extends Command
 
                 $contributor_page++;
             } while (count($contributors['body']) === $contributor_per_page);
-/*
+
             //Save collaborators for each repo
-            $contributor_page = 1;
-            $contributor_per_page = 100;
+            $collaborator_page = 1;
+            $collaborator_per_page = 100;
             do {
-                $contributors = $this->getGithubEndpointInfo(
-                    $repo['contributors_url'],
+                $collaborators = $this->getGithubEndpointInfo(
+                    mb_substr($repo['collaborators_url'], 0, -15),
                     $this->bearer,
-                    $contributor_page,
-                    $contributor_per_page
+                    NULL,
+                    $collaborator_page,
+                    $collaborator_per_page
                 );
-                if($contributors['headers']['StatusCode'] !== 200) {
-                    $this->error('StatusCode: ' . $contributors['headers']['StatusCode'] );
+                if($collaborators['headers']['StatusCode'] !== 200) {
+                    $this->error('StatusCode: ' . $collaborators['headers']['StatusCode'] );
                     return Command::FAILURE;
                 }
     
-                if ($contributors['headers']['X-ratelimit-remaining'] > 0) {
+                if ($collaborators['headers']['X-ratelimit-remaining'] > 0) {
                     $this->info('   X-ratelimit-remaining: ' .
-                        $contributors['headers']['X-ratelimit-remaining']);
+                        $collaborators['headers']['X-ratelimit-remaining']);
                 } else {
                     $this->error('   X-ratelimit-remaining: ' .
-                        $contributors['headers']['X-ratelimit-remaining']);
+                        $collaborators['headers']['X-ratelimit-remaining']);
                     return Command::FAILURE;
                 }
 
-                $this->line('      Save ' . count($contributors['body']) . ' contributors record to BD.');
-                $this->saveRepoContributorsToBD($uuid, $contributors['body']);
+                $this->line('      Save ' . count($collaborators['body']) . ' collaborators record to BD.');
+                $this->saveRepoCollaboratorsToBD($repo['id'], $collaborators['body']);
 
-                $contributor_page++;
-            } while (count($contributors['body']) === $contributor_per_page);
-            */
+                $collaborator_page++;
+            } while (count($collaborators['body']) === $collaborator_per_page);
+
+            //Save commits for each repo
+            dump('$previousPushDate ' . (new \Carbon\Carbon($previousPushDate))->toIso8601String());
+            dump('$res->github_pushed_at '. (new \Carbon\Carbon($res->github_pushed_at))->toIso8601String());
+            if (
+                (new \Carbon\Carbon($previousPushDate))->toIso8601String() ===
+                (new \Carbon\Carbon($res->github_pushed_at))->toIso8601String()
+                ) {
+                $this->info('      No new push, skip commits loading.');
+            } else {
+                $commit_page = 1;
+                $commit_per_page = 100;
+                do {
+                    $commits = $this->getGithubEndpointInfo(
+                        mb_substr($repo['commits_url'], 0, -6),
+                        $this->bearer,
+                        NULL,
+                        $commit_page,
+                        $commit_per_page
+                    );
+                    if($commits['headers']['StatusCode'] !== 200) {
+                        $this->error('StatusCode: ' . $commits['headers']['StatusCode'] );
+                        return Command::FAILURE;
+                    }
+        
+                    if ($commits['headers']['X-ratelimit-remaining'] > 0) {
+                        $this->info('   X-ratelimit-remaining: ' .
+                            $commits['headers']['X-ratelimit-remaining']);
+                    } else {
+                        $this->error('   X-ratelimit-remaining: ' .
+                            $commits['headers']['X-ratelimit-remaining']);
+                        return Command::FAILURE;
+                    }
+
+                    $this->line('      Save ' . count($commits['body']) . ' collaborators record to BD.');
+                    $this->saveRepoCommitsToBD($repo['id'], $commits['body']);
+
+                    $commit_page++;
+                } while (count($commits['body']) === $commit_per_page);
+            }
         }
         return Command::SUCCESS;
     }
@@ -333,6 +390,78 @@ class GetGithubInfo extends Command
                     'type' => $contributor['type'],
                     'site_admin' => $contributor['site_admin'],
                     'contributions' => $contributor['contributions']
+                ]
+            );
+
+        }
+    }
+
+    /**
+     * Save info from my github to BD.
+     * 
+     * @param string $repoId
+     * @param array $collaborators
+     * @return void
+     */
+    private function saveRepoCollaboratorsToBD(string $repoId, array $collaborators): void
+    {
+        
+        foreach ($collaborators as $collaborator) {
+            $this->line(
+                '      collaborator ID: ' . $collaborator['id'] .
+                ' collaborator login: ' . $collaborator['login']
+            );
+            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $res = $repo->collaborators()->updateOrCreate(
+                [
+                    'github_id' => $collaborator['id'],
+                ],
+                [
+                    'login' => $collaborator['login'],
+                    'avatar_url' => $collaborator['avatar_url'],
+                    'url' => $collaborator['url'],
+                    'html_url' => $collaborator['html_url'],
+                    'repos_url' => $collaborator['repos_url'],
+                    'type' => $collaborator['type'],
+                    'site_admin' => $collaborator['site_admin'],
+                    'permissions' => $collaborator['permissions'],
+                    'role_name' => $collaborator['role_name']
+                ]
+            );
+
+        }
+    }
+
+    /**
+     * Save info from my github to BD.
+     * 
+     * @param string $repoId
+     * @param array $collaborators
+     * @return void
+     */
+    private function saveRepoCommitsToBD(string $repoId, array $commits): void
+    {
+        
+        foreach ($commits as $commit) {
+            $this->line(
+                '      commit SHA: ' . $commit['sha'] .
+                ' commit message: ' . $commit['commit']['message']
+            );
+            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $res = $repo->commits()->updateOrCreate(
+                [
+                    'sha' => $commit['sha'],
+                ],
+                [
+                    'author_id' => $commit['author']['id'],
+                    'author_login' => $commit['author']['login'],
+                    'author_name' => $commit['commit']['author']['name'],
+                    'author_date' => $commit['commit']['author']['date'],
+                    'committer_id' => $commit['committer']['id'],
+                    'committer_login' => $commit['committer']['login'],
+                    'committer_name' => $commit['commit']['committer']['name'],
+                    'committer_date' => $commit['commit']['committer']['date'],
+                    'message' => mb_substr($commit['commit']['message'], 0, 255)
                 ]
             );
 

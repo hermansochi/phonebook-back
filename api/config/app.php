@@ -15,6 +15,7 @@ return [
     */
 
     'github_bearer' => env('GITHUB_BEARER'),
+    'github_entrypoint' => env('GITHUB_ENTRYPOINT'),
     
     /*
     |--------------------------------------------------------------------------

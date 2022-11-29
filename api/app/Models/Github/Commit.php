@@ -6,27 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\Uuids;
 
-class Collaborator extends Model
+class Commit extends Model
 {
     use HasFactory, Uuids;
 
     protected $fillable = [
         'id',
         'repo_id',
-        'github_id',
-        'login',
-        'avatar_url',
-        'url',
-        'html_url',
-        'repos_url',
-        'type',
-        'site_admin',
-        'permissions',
-        'role_name'
-    ];
-
-    protected $casts = [
-        'permissions' => 'array',
+        'sha',
+        'author_id',
+        'author_login',
+        'author_name',
+        'author_date',
+        'committer_id',
+        'committer_login',
+        'committer_name',
+        'committer_date',
+        'message'
     ];
 
     public function repo()

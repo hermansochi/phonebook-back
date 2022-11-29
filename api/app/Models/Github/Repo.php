@@ -63,4 +63,9 @@ class Repo extends Model
     {
         return $this->hasMany(Collaborator::class);
     }
+
+    public function commits()
+    {
+        return $this->hasMany(Commit::class);
+    }
 }
