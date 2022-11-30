@@ -25,6 +25,11 @@ class Commit extends Model
         'message'
     ];
 
+    protected $casts = [
+        'author_date' => 'datetime',
+        'committer_date' => 'datetime',
+    ];
+
     public function repo()
     {
         return $this->belongsTo(Repo::class);
