@@ -4,7 +4,7 @@ namespace App\Http\Resources\Github;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CommitResource extends JsonResource
+class RepoResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -14,8 +14,8 @@ class CommitResource extends JsonResource
      */
     public function toArray($request)
     {
-        //return parent::toArray($request);
-        return [
+        return parent::toArray($request);
+        /*return [
             'id' => $this->id,
             'repo_id' => $this->repo_id,
             'sha' => $this->sha,
@@ -24,6 +24,6 @@ class CommitResource extends JsonResource
             'author_name' => $this->author_name,
             'author_date' => $this->author_date,
             'message' => $this->message,
-        ];
+        ];*/
     }
 }

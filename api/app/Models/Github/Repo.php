@@ -49,6 +49,12 @@ class Repo extends Model
         'github_pushed_at'
     ];
 
+    protected $casts = [
+        'github_created_at' => 'datetime',
+        'github_updated_at' => 'datetime',
+        'github_pushed_at' => 'datetime'
+    ];
+
     public function githubUser()
     {
         return $this->belongsTo(GithubUser::class);

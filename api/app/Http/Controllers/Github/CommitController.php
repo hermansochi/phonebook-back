@@ -16,7 +16,7 @@ class CommitController extends Controller
      *
      * @return App\Http\Resources\Github\CommitCollection
      */
-    public function index(IndexCommitRequest $request)
+    public function index(IndexCommitRequest $request): CommitCollection
     {
         $validated = $request->safe()->only(['page', 'per_page', 'sort']);
         if (!array_key_exists('per_page', $validated)) {
