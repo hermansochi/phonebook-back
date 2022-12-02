@@ -209,8 +209,13 @@ class GetGithubInfo extends Command
             $githubUser = GithubUser::find($uuid);
 
             if (!$this->option('force')) {
-                $previousPushDate = (new \Carbon\Carbon($githubUser->repos()
-                    ->where('github_id', '=', $repo['id'])->first()->github_pushed_at))->toIso8601String();
+                // check new repo
+                $oldRepo = $githubUser->repos()->where('github_id', '=', $repo['id'])->first();
+                if (is_null($oldRepo)) {
+                    $previousPushDate = null;
+                } else {
+                    $previousPushDate = (new \Carbon\Carbon($oldRepo->github_pushed_at))->toIso8601String();
+                }
             } else {
                 $previousPushDate = null;
             }
