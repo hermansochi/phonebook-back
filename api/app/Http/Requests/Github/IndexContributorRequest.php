@@ -5,7 +5,7 @@ namespace App\Http\Requests\Github;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class IndexCommitRequest extends FormRequest
+class IndexContributorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -27,7 +27,7 @@ class IndexCommitRequest extends FormRequest
         return [
             'page' => 'integer',
             'per_page' => 'integer',
-            'sort' => Rule::in(['login', '-login', 'contributions', '-contributions'])
+            'sort' => Rule::in(['date', '-date'])
         ];
     }
 }

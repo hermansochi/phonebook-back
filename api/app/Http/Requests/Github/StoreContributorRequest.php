@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Github;
+namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-class IndexCommitRequest extends FormRequest
+class StoreContributorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -14,7 +13,7 @@ class IndexCommitRequest extends FormRequest
      */
     public function authorize()
     {
-        return true;
+        return false;
     }
 
     /**
@@ -25,9 +24,7 @@ class IndexCommitRequest extends FormRequest
     public function rules()
     {
         return [
-            'page' => 'integer',
-            'per_page' => 'integer',
-            'sort' => Rule::in(['login', '-login', 'contributions', '-contributions'])
+            //
         ];
     }
 }
