@@ -3,8 +3,9 @@
 namespace App\Http\Requests\Github;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class UpdateContributorRequest extends FormRequest
+class IndexCollaboratorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -13,7 +14,7 @@ class UpdateContributorRequest extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +25,9 @@ class UpdateContributorRequest extends FormRequest
     public function rules()
     {
         return [
-            //
+            'page' => 'integer',
+            'per_page' => 'integer',
+            'sort' => Rule::in(['login', '-login', 'contributions', '-contributions'])
         ];
     }
 }

@@ -27,7 +27,7 @@ class IndexContributorRequest extends FormRequest
         return [
             'page' => 'integer',
             'per_page' => 'integer',
-            'sort' => Rule::in(['date', '-date'])
+            'sort' => Rule::in(['login', '-login', 'contributions', '-contributions'])
         ];
     }
 }

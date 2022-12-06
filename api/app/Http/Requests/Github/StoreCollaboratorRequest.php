@@ -4,7 +4,7 @@ namespace App\Http\Requests\Github;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateContributorRequest extends FormRequest
+class StoreCollaboratorRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.

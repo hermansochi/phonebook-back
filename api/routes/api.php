@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Github\CommitController;
 use App\Http\Controllers\Github\RepoController;
 use App\Http\Controllers\Github\ContributorController;
+use App\Http\Controllers\Github\CollaboratorController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,8 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('repos', RepoController::class)
             ->only(['index', 'show']);
         Route::apiResource('contributors', ContributorController::class)
+            ->only(['index', 'show']);
+        Route::apiResource('collaborators', CollaboratorController::class)
             ->only(['index', 'show']);
     });
 });

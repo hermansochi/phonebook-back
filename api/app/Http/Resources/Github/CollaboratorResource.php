@@ -4,7 +4,7 @@ namespace App\Http\Resources\Github;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ContributorResource extends JsonResource
+class CollaboratorResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -23,7 +23,6 @@ class ContributorResource extends JsonResource
             'avatar_url' => $this->avatar_url,
             'html_url' => $this->html_url,
             'repos_url' => $this->repos_url,
-            'contributions' => $this->contributions
         ];
     }
 }
