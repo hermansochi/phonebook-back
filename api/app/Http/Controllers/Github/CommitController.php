@@ -8,6 +8,7 @@ use App\Http\Requests\Github\StoreCommitRequest;
 use App\Http\Requests\Github\UpdateCommitRequest;
 use App\Http\Resources\Github\CommitCollection;
 use App\Models\Github\Commit;
+use Illuminate\Support\Facades\DB;
 
 class CommitController extends Controller
 {
@@ -31,6 +32,28 @@ class CommitController extends Controller
         }
         return new CommitCollection(Commit::orderBy($sortField, $sortOrder)
             ->paginate($validated['per_page']));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function stat()
+    {
+        //
+
+        $commitsByDay = Commit::where('author_date', '>=', \Carbon\Carbon::now()->subMonth(3))
+            ->groupBy('date')
+            ->groupBy('author_name')
+            ->orderBy('date', 'DESC')
+            ->get(array(
+                DB::raw('Date(author_date) as date'),
+                DB::raw('author_name'),
+                DB::raw('COUNT(*) as "commits"')
+            ));
+
+        return ['data' => $commitsByDay];
     }
 
     /**

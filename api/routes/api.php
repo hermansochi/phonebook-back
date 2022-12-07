@@ -26,6 +26,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('github')->group(function () {
         Route::apiResource('commits', CommitController::class)
             ->only(['index', 'show']);
+        Route::get('commitstats', [CommitController::class, 'stat']);
         Route::apiResource('repos', RepoController::class)
             ->only(['index', 'show']);
         Route::apiResource('contributors', ContributorController::class)

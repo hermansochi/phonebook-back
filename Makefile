@@ -1,13 +1,13 @@
 init: init-ci 
 
-init-ci: create-newtork docker-down-clear \
+init-ci: docker-down-clear \
 	docker-pull docker-build docker-up \
 	api-init
 
 create-newtork:
 	docker network create --attachable traefik-public || true
 
-up: docker-up
+up: create-newtork docker-up
 down: docker-down
 restart: down up
 
