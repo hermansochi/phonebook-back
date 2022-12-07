@@ -22,7 +22,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->middleware('throttle:500,1')->group(function () {
     Route::prefix('github')->group(function () {
         Route::apiResource('commits', CommitController::class)
             ->only(['index', 'show']);
