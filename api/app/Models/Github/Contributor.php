@@ -2,9 +2,9 @@
 
 namespace App\Models\Github;
 
+use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Uuids;
 
 class Contributor extends Model
 {

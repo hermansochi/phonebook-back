@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Github\GithubUser;
 use App\Models\Github\Repo;
+use Illuminate\Console\Command;
 
 class GetGithubInfo extends Command
 {
@@ -29,7 +29,6 @@ class GetGithubInfo extends Command
      */
     protected string $entrypoint;
 
-
     /**
      * Github api bearer.
      *
@@ -52,18 +51,19 @@ class GetGithubInfo extends Command
 
         $this->line('Get entrypoint info.');
 
-        if($entryPoint['headers']['StatusCode'] !== 200) {
-            $this->error('StatusCode: ' . $entryPoint['headers']['StatusCode'] );
+        if ($entryPoint['headers']['StatusCode'] !== 200) {
+            $this->error('StatusCode: '.$entryPoint['headers']['StatusCode']);
+
             return Command::FAILURE;
         }
 
         $this->line('Save entrypoint info to BD.');
         $githubUser = $this->saveGithubUserToBD($entryPoint['body'], 'root_user');
-        $this->line('   ID: ' . $githubUser->github_id .
-                    ' User name: ' . $githubUser->name .
-                    ' Repos url: ' . $githubUser->repos_url .
+        $this->line('   ID: '.$githubUser->github_id.
+                    ' User name: '.$githubUser->name.
+                    ' Repos url: '.$githubUser->repos_url.
                     (($githubUser->wasRecentlyCreated) ? ' created.' : ' updated.')
-                );
+        );
 
         $this->line('Get repos info.');
         $page = 1;
@@ -71,19 +71,21 @@ class GetGithubInfo extends Command
 
         do {
             $repos = $this->getGithubEndpointInfo($githubUser->repos_url, $this->bearer, 'all', $page, $per_page);
-            if($repos['headers']['StatusCode'] !== 200) {
-                $this->error('StatusCode: ' . $repos['headers']['StatusCode'] );
+            if ($repos['headers']['StatusCode'] !== 200) {
+                $this->error('StatusCode: '.$repos['headers']['StatusCode']);
+
                 return Command::FAILURE;
             }
 
             if ($repos['headers']['X-ratelimit-remaining'] > 0) {
-                $this->info('X-ratelimit-remaining: ' . $repos['headers']['X-ratelimit-remaining']);
+                $this->info('X-ratelimit-remaining: '.$repos['headers']['X-ratelimit-remaining']);
             } else {
-                $this->error('X-ratelimit-remaining: ' . $repos['headers']['X-ratelimit-remaining']);
+                $this->error('X-ratelimit-remaining: '.$repos['headers']['X-ratelimit-remaining']);
+
                 return Command::FAILURE;
             }
-    
-            $this->line('Save ' . count($repos['body']) . ' repos record to BD.');
+
+            $this->line('Save '.count($repos['body']).' repos record to BD.');
             $ret = $this->saveGithubUserReposToBD($githubUser->id, $repos['body']);
             if ($ret === Command::FAILURE) {
                 return Command::FAILURE;
@@ -97,12 +99,12 @@ class GetGithubInfo extends Command
 
     /**
      * Get info from my github entrypoint.
-     * 
-     * @param string $url
-     * @param string $bearer
-     * @param string $type
-     * @param int $page
-     * @param int $per_page
+     *
+     * @param  string  $url
+     * @param  string  $bearer
+     * @param  string  $type
+     * @param  int  $page
+     * @param  int  $per_page
      * @return array
      */
     private function getGithubEndpointInfo(
@@ -112,18 +114,16 @@ class GetGithubInfo extends Command
         int $page = 1,
         int $per_page = 30,
         string $since = null,
-        ): array
-    {
-        
+        ): array {
         $client = new \GuzzleHttp\Client();
         $headers = [
             'headers' => [
-                'Accept' => 'application/vnd.github+json'
+                'Accept' => 'application/vnd.github+json',
             ],
         ];
-        
-        if (!is_null($bearer)) {
-            $headers['headers']['Authorization'] = 'Bearer ' . $bearer;
+
+        if (! is_null($bearer)) {
+            $headers['headers']['Authorization'] = 'Bearer '.$bearer;
         }
         if ($page !== 1) {
             $headers['query']['page'] = $page;
@@ -131,10 +131,10 @@ class GetGithubInfo extends Command
         if ($per_page !== 30) {
             $headers['query']['per_page'] = $per_page;
         }
-        if (!is_null($type)) {
+        if (! is_null($type)) {
             $headers['query']['type'] = $type;
         }
-        if (!is_null($since)) {
+        if (! is_null($since)) {
             $headers['query']['since'] = $since;
         }
         $response = $client->request('GET', $url, $headers);
@@ -151,22 +151,22 @@ class GetGithubInfo extends Command
 
         return [
             'headers' => $headers,
-            'body' => json_decode($response->getBody(), true)
+            'body' => json_decode($response->getBody(), true),
         ];
     }
 
     /**
      * Save info from my github to BD.
-     * 
-     * @param array $githubUser
-     * @param string $userRole
+     *
+     * @param  array  $githubUser
+     * @param  string  $userRole
      * @return GithubUser
      */
     private function saveGithubUserToBD(array $githubUser, string $userRole): GithubUser
     {
         $res = GithubUser::updateOrCreate(
             [
-                'github_id' => $githubUser['id']
+                'github_id' => $githubUser['id'],
             ],
             [
                 'role' => $userRole,
@@ -192,23 +192,24 @@ class GetGithubInfo extends Command
 
             ]
         );
+
         return $res;
     }
 
     /**
      * Save info from my github to BD.
-     * 
-     * @param string $uuid
-     * @param array $repos
+     *
+     * @param  string  $uuid
+     * @param  array  $repos
      * @return int
      */
     private function saveGithubUserReposToBD(string $uuid, array $repos): int
     {
         foreach ($repos as $repo) {
-            $this->line('   Repo ID: ' . $repo['id'] . ' repo name: ' . $repo['name']);
+            $this->line('   Repo ID: '.$repo['id'].' repo name: '.$repo['name']);
             $githubUser = GithubUser::find($uuid);
 
-            if (!$this->option('force')) {
+            if (! $this->option('force')) {
                 // check new repo
                 $oldRepo = $githubUser->repos()->where('github_id', '=', $repo['id'])->first();
                 if (is_null($oldRepo)) {
@@ -257,7 +258,7 @@ class GetGithubInfo extends Command
                     'default_branch' => $repo['default_branch'],
                     'github_created_at' => $repo['created_at'],
                     'github_updated_at' => $repo['updated_at'],
-                    'github_pushed_at'  => $repo['pushed_at']
+                    'github_pushed_at' => $repo['pushed_at'],
                 ]
             );
 
@@ -268,25 +269,27 @@ class GetGithubInfo extends Command
                 $contributors = $this->getGithubEndpointInfo(
                     $repo['contributors_url'],
                     $this->bearer,
-                    NULL,
+                    null,
                     $contributor_page,
                     $contributor_per_page
                 );
-                if($contributors['headers']['StatusCode'] !== 200) {
-                    $this->error('StatusCode: ' . $contributors['headers']['StatusCode'] );
-                    return Command::FAILURE;
-                }
-    
-                if ($contributors['headers']['X-ratelimit-remaining'] > 0) {
-                    $this->info('   X-ratelimit-remaining: ' .
-                        $contributors['headers']['X-ratelimit-remaining']);
-                } else {
-                    $this->error('   X-ratelimit-remaining: ' .
-                        $contributors['headers']['X-ratelimit-remaining']);
+                if ($contributors['headers']['StatusCode'] !== 200) {
+                    $this->error('StatusCode: '.$contributors['headers']['StatusCode']);
+
                     return Command::FAILURE;
                 }
 
-                $this->line('      Save ' . count($contributors['body']) . ' contributors record to BD.');
+                if ($contributors['headers']['X-ratelimit-remaining'] > 0) {
+                    $this->info('   X-ratelimit-remaining: '.
+                        $contributors['headers']['X-ratelimit-remaining']);
+                } else {
+                    $this->error('   X-ratelimit-remaining: '.
+                        $contributors['headers']['X-ratelimit-remaining']);
+
+                    return Command::FAILURE;
+                }
+
+                $this->line('      Save '.count($contributors['body']).' contributors record to BD.');
                 $this->saveRepoContributorsToBD($repo['id'], $contributors['body']);
 
                 $contributor_page++;
@@ -299,25 +302,27 @@ class GetGithubInfo extends Command
                 $collaborators = $this->getGithubEndpointInfo(
                     mb_substr($repo['collaborators_url'], 0, -15),
                     $this->bearer,
-                    NULL,
+                    null,
                     $collaborator_page,
                     $collaborator_per_page
                 );
-                if($collaborators['headers']['StatusCode'] !== 200) {
-                    $this->error('StatusCode: ' . $collaborators['headers']['StatusCode'] );
-                    return Command::FAILURE;
-                }
-    
-                if ($collaborators['headers']['X-ratelimit-remaining'] > 0) {
-                    $this->info('   X-ratelimit-remaining: ' .
-                        $collaborators['headers']['X-ratelimit-remaining']);
-                } else {
-                    $this->error('   X-ratelimit-remaining: ' .
-                        $collaborators['headers']['X-ratelimit-remaining']);
+                if ($collaborators['headers']['StatusCode'] !== 200) {
+                    $this->error('StatusCode: '.$collaborators['headers']['StatusCode']);
+
                     return Command::FAILURE;
                 }
 
-                $this->line('      Save ' . count($collaborators['body']) . ' collaborators record to BD.');
+                if ($collaborators['headers']['X-ratelimit-remaining'] > 0) {
+                    $this->info('   X-ratelimit-remaining: '.
+                        $collaborators['headers']['X-ratelimit-remaining']);
+                } else {
+                    $this->error('   X-ratelimit-remaining: '.
+                        $collaborators['headers']['X-ratelimit-remaining']);
+
+                    return Command::FAILURE;
+                }
+
+                $this->line('      Save '.count($collaborators['body']).' collaborators record to BD.');
                 $this->saveRepoCollaboratorsToBD($repo['id'], $collaborators['body']);
 
                 $collaborator_page++;
@@ -333,51 +338,53 @@ class GetGithubInfo extends Command
                     $commits = $this->getGithubEndpointInfo(
                         mb_substr($repo['commits_url'], 0, -6),
                         $this->bearer,
-                        NULL,
+                        null,
                         $commit_page,
                         $commit_per_page,
                         $since = $previousPushDate
                     );
-                    if($commits['headers']['StatusCode'] !== 200) {
-                        $this->error('StatusCode: ' . $commits['headers']['StatusCode'] );
-                        return Command::FAILURE;
-                    }
-        
-                    if ($commits['headers']['X-ratelimit-remaining'] > 0) {
-                        $this->info('   X-ratelimit-remaining: ' .
-                            $commits['headers']['X-ratelimit-remaining']);
-                    } else {
-                        $this->error('   X-ratelimit-remaining: ' .
-                            $commits['headers']['X-ratelimit-remaining']);
+                    if ($commits['headers']['StatusCode'] !== 200) {
+                        $this->error('StatusCode: '.$commits['headers']['StatusCode']);
+
                         return Command::FAILURE;
                     }
 
-                    $this->line('      Save ' . count($commits['body']) . ' collaborators record to BD.');
+                    if ($commits['headers']['X-ratelimit-remaining'] > 0) {
+                        $this->info('   X-ratelimit-remaining: '.
+                            $commits['headers']['X-ratelimit-remaining']);
+                    } else {
+                        $this->error('   X-ratelimit-remaining: '.
+                            $commits['headers']['X-ratelimit-remaining']);
+
+                        return Command::FAILURE;
+                    }
+
+                    $this->line('      Save '.count($commits['body']).' collaborators record to BD.');
                     $this->saveRepoCommitsToBD($repo['id'], $commits['body']);
 
                     $commit_page++;
                 } while (count($commits['body']) === $commit_per_page);
             }
         }
+
         return Command::SUCCESS;
     }
 
     /**
      * Save info from my github to BD.
-     * 
-     * @param string $repoId
-     * @param array $contributors
+     *
+     * @param  string  $repoId
+     * @param  array  $contributors
      * @return void
      */
     private function saveRepoContributorsToBD(string $repoId, array $contributors): void
     {
-        
         foreach ($contributors as $contributor) {
             $this->line(
-                '      contributor ID: ' . $contributor['id'] .
-                ' contributor login: ' . $contributor['login']
+                '      contributor ID: '.$contributor['id'].
+                ' contributor login: '.$contributor['login']
             );
-            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $repo = Repo::where('github_id', '=', $repoId)->first();
             $res = $repo->contributors()->updateOrCreate(
                 [
                     'github_id' => $contributor['id'],
@@ -390,29 +397,27 @@ class GetGithubInfo extends Command
                     'repos_url' => $contributor['repos_url'],
                     'type' => $contributor['type'],
                     'site_admin' => $contributor['site_admin'],
-                    'contributions' => $contributor['contributions']
+                    'contributions' => $contributor['contributions'],
                 ]
             );
-
         }
     }
 
     /**
      * Save info from my github to BD.
-     * 
-     * @param string $repoId
-     * @param array $collaborators
+     *
+     * @param  string  $repoId
+     * @param  array  $collaborators
      * @return void
      */
     private function saveRepoCollaboratorsToBD(string $repoId, array $collaborators): void
     {
-        
         foreach ($collaborators as $collaborator) {
             $this->line(
-                '      collaborator ID: ' . $collaborator['id'] .
-                ' collaborator login: ' . $collaborator['login']
+                '      collaborator ID: '.$collaborator['id'].
+                ' collaborator login: '.$collaborator['login']
             );
-            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $repo = Repo::where('github_id', '=', $repoId)->first();
             $res = $repo->collaborators()->updateOrCreate(
                 [
                     'github_id' => $collaborator['id'],
@@ -426,29 +431,27 @@ class GetGithubInfo extends Command
                     'type' => $collaborator['type'],
                     'site_admin' => $collaborator['site_admin'],
                     'permissions' => $collaborator['permissions'],
-                    'role_name' => $collaborator['role_name']
+                    'role_name' => $collaborator['role_name'],
                 ]
             );
-
         }
     }
 
     /**
      * Save info from my github to BD.
-     * 
-     * @param string $repoId
-     * @param array $collaborators
+     *
+     * @param  string  $repoId
+     * @param  array  $collaborators
      * @return void
      */
     private function saveRepoCommitsToBD(string $repoId, array $commits): void
     {
-        
         foreach ($commits as $commit) {
             $this->line(
-                '      commit SHA: ' . $commit['sha'] .
-                ' commit message: ' . $commit['commit']['message']
+                '      commit SHA: '.$commit['sha'].
+                ' commit message: '.$commit['commit']['message']
             );
-            $repo =  Repo::where('github_id', '=', $repoId)->first();
+            $repo = Repo::where('github_id', '=', $repoId)->first();
             $res = $repo->commits()->updateOrCreate(
                 [
                     'sha' => $commit['sha'],
@@ -462,10 +465,9 @@ class GetGithubInfo extends Command
                     'committer_login' => $commit['committer']['login'],
                     'committer_name' => $commit['commit']['committer']['name'],
                     'committer_date' => $commit['commit']['committer']['date'],
-                    'message' => mb_substr($commit['commit']['message'], 0, 255)
+                    'message' => mb_substr($commit['commit']['message'], 0, 255),
                 ]
             );
-
         }
     }
 }

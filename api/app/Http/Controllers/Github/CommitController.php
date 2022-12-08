@@ -20,16 +20,17 @@ class CommitController extends Controller
     public function index(IndexCommitRequest $request): CommitCollection
     {
         $validated = $request->safe()->only(['page', 'per_page', 'sort']);
-        if (!array_key_exists('per_page', $validated)) {
+        if (! array_key_exists('per_page', $validated)) {
             $validated['per_page'] = 30;
         }
-        if (!array_key_exists('sort', $validated) or $validated['sort'] === '-date') {
-                $sortField = 'author_date';
-                $sortOrder = 'desc';
+        if (! array_key_exists('sort', $validated) or $validated['sort'] === '-date') {
+            $sortField = 'author_date';
+            $sortOrder = 'desc';
         } else {
             $sortField = 'author_date';
             $sortOrder = 'asc';
         }
+
         return new CommitCollection(Commit::orderBy($sortField, $sortOrder)
             ->paginate($validated['per_page']));
     }
@@ -47,11 +48,11 @@ class CommitController extends Controller
             ->groupBy('date')
             ->groupBy('author_name')
             ->orderBy('date', 'DESC')
-            ->get(array(
+            ->get([
                 DB::raw('Date(author_date) as date'),
                 DB::raw('author_name'),
-                DB::raw('COUNT(*) as "commits"')
-            ));
+                DB::raw('COUNT(*) as "commits"'),
+            ]);
 
         return ['data' => $commitsByDay];
     }

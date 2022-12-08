@@ -2,9 +2,9 @@
 
 namespace App\Models\Github;
 
+use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Uuids;
 
 class GithubUser extends Model
 {
@@ -32,12 +32,11 @@ class GithubUser extends Model
         'followers',
         'following',
         'github_created_at',
-        'github_updated_at'
+        'github_updated_at',
     ];
 
     public function repos()
     {
         return $this->hasMany(Repo::class);
     }
-
 }

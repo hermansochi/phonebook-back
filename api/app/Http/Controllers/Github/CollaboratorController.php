@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Github\IndexCollaboratorRequest;
 use App\Http\Requests\Github\StoreCollaboratorRequest;
 use App\Http\Requests\Github\UpdateCollaboratorRequest;
-use App\Http\Resources\Github\CollaboratorResource;
 use App\Http\Resources\Github\CollaboratorCollection;
 use App\Models\Github\Collaborator;
 
@@ -20,12 +19,12 @@ class CollaboratorController extends Controller
     public function index(IndexCollaboratorRequest $request): CollaboratorCollection
     {
         $validated = $request->safe()->only(['page', 'per_page', 'sort']);
-        if (!array_key_exists('per_page', $validated)) {
+        if (! array_key_exists('per_page', $validated)) {
             $validated['per_page'] = 30;
         }
-        if (!array_key_exists('sort', $validated) or $validated['sort'] === 'login') {
-                $sortField = 'login';
-                $sortOrder = 'asc';
+        if (! array_key_exists('sort', $validated) or $validated['sort'] === 'login') {
+            $sortField = 'login';
+            $sortOrder = 'asc';
         } else {
             $sortField = 'login';
             $sortOrder = 'desc';

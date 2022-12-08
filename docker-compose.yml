@@ -24,7 +24,7 @@ services:
 
     herman-team-api:
         build:
-            context: docker
+            context: api/docker
             dockerfile: development/nginx/Dockerfile
         volumes:
             - ./api:/app:rw
@@ -38,17 +38,17 @@ services:
             - traefik.http.routers.api.rule=Host(`api.localhost`)
             - traefik.http.services.api.loadBalancer.server.port=80
 
-    api-php-fpm:
+    php-fpm:
         build:
-            context: docker
+            context: api/docker
             dockerfile: development/php-fpm/Dockerfile
         volumes:
             - ./api:/app:rw
 
 
-    api-php-cli:
+    php-cli:
         build:
-            context: docker
+            context: api/docker
             dockerfile: development/php-cli/Dockerfile
         volumes:
             - ./api:/app:rw

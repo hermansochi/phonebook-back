@@ -2,9 +2,9 @@
 
 namespace App\Models\Github;
 
+use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Uuids;
 
 class Commit extends Model
 {
@@ -22,7 +22,7 @@ class Commit extends Model
         'committer_login',
         'committer_name',
         'committer_date',
-        'message'
+        'message',
     ];
 
     protected $casts = [

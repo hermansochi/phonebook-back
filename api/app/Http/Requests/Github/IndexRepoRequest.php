@@ -35,8 +35,8 @@ class IndexRepoRequest extends FormRequest
                 'pushed',
                 '-pushed',
                 'created',
-                '-created'
-                ])
+                '-created',
+            ]),
         ];
     }
 }

@@ -27,7 +27,7 @@ class IndexCommitRequest extends FormRequest
         return [
             'page' => 'integer',
             'per_page' => 'integer',
-            'sort' => Rule::in(['date', '-date'])
+            'sort' => Rule::in(['date', '-date']),
         ];
     }
 }

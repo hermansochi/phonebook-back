@@ -3,9 +3,7 @@ FROM php:8.1-cli-alpine AS builder
 #RUN apk add --no-cache postgresql-dev \
 #    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
 #    && docker-php-ext-install pdo_pgsql opcache
-#
-#RUN apk add --no-cache unzip
-#
+
 #RUN apk add --no-cache \
 #      freetype \
 #      libjpeg-turbo \
@@ -24,9 +22,9 @@ FROM php:8.1-cli-alpine AS builder
 #      libpng-dev \
 #    && rm -rf /tmp/*
 
-RUN apk add --no-cache unzip postgresql-dev bash coreutils \
-    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
-    && docker-php-ext-install pdo_pgsql
+#RUN apk add --no-cache unzip postgresql-dev bash coreutils \
+#    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+#    && docker-php-ext-install pdo_pgsql
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
@@ -35,31 +33,35 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/bin --fil
 WORKDIR /app
 
 COPY ./composer.json ./composer.lock ./
+COPY ./.env.prod ./
 
-RUN composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --no-scripts \
+RUN composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --no-scripts\
     && rm -rf /root/.composer/cache
 
-### FPM ###
+### CLI ###
 
-FROM php:8.1-fpm-alpine
+FROM php:8.1-cli-alpine
 
-RUN apk add --no-cache postgresql-dev fcgi \
+RUN apk add --no-cache postgresql-dev bash coreutils \
     && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
     && docker-php-ext-install pdo_pgsql opcache
 
 RUN mv $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
 COPY ./docker/common/php/conf.d /usr/local/etc/php/conf.d
-COPY ./docker/common/php/php-fpm.d /usr/local/etc/php-fpm.d
 COPY ./docker/production/php/conf.d /usr/local/etc/php/conf.d
+
+COPY ./docker/common/wait-for-it.sh /usr/local/bin/wait-for-it
+RUN chmod 555 /usr/local/bin/wait-for-it
+
+RUN addgroup -g 1000 app && adduser -u 1000 -G app -s /bin/sh -D app
 
 WORKDIR /app
 
 COPY --from=builder /app ./
 COPY ./ ./
+COPY --from=builder /app/.env.prod ./.env
 
 RUN chmod -R ug+rwx storage bootstrap/cache
 
-HEALTHCHECK --interval=5s --timeout=3s --start-period=1s \
-    CMD REDIRECT_STATUS=true SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET \
-    cgi-fcgi -bind -connect 127.0.0.1:9000 || exit 1
+USER app

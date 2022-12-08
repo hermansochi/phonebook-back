@@ -19,12 +19,12 @@ class RepoController extends Controller
     public function index(IndexRepoRequest $request): RepoCollection
     {
         $validated = $request->safe()->only(['page', 'per_page', 'sort']);
-        if (!array_key_exists('per_page', $validated)) {
+        if (! array_key_exists('per_page', $validated)) {
             $validated['per_page'] = 30;
         }
-        if (!array_key_exists('sort', $validated)) {
-                $sortField = 'github_pushed_at';
-                $sortOrder = 'desc';
+        if (! array_key_exists('sort', $validated)) {
+            $sortField = 'github_pushed_at';
+            $sortOrder = 'desc';
         } else {
             switch ($validated['sort']) {
                 case 'name':
@@ -42,7 +42,7 @@ class RepoController extends Controller
                 case '-size':
                     $sortField = 'size';
                     $sortOrder = 'desc';
-                    break;                    
+                    break;
                 case 'pushed':
                     $sortField = 'github_pushed_at';
                     $sortOrder = 'asc';
@@ -66,7 +66,7 @@ class RepoController extends Controller
             Repo::where('visibility', '=', 'public')
                 ->orderBy($sortField, $sortOrder)
                 ->paginate($validated['per_page'])
-            );
+        );
     }
 
     /**

@@ -2,9 +2,9 @@
 
 namespace App\Models\Github;
 
+use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Uuids;
 
 class Repo extends Model
 {
@@ -46,13 +46,13 @@ class Repo extends Model
         'default_branch',
         'github_created_at',
         'github_updated_at',
-        'github_pushed_at'
+        'github_pushed_at',
     ];
 
     protected $casts = [
         'github_created_at' => 'datetime',
         'github_updated_at' => 'datetime',
-        'github_pushed_at' => 'datetime'
+        'github_pushed_at' => 'datetime',
     ];
 
     public function githubUser()

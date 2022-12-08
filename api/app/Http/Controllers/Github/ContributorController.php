@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Github\IndexContributorRequest;
 use App\Http\Requests\Github\StoreContributorRequest;
 use App\Http\Requests\Github\UpdateContributorRequest;
-use App\Http\Resources\Github\ContributorResource;
 use App\Http\Resources\Github\ContributorCollection;
 use App\Models\Github\Contributor;
 
@@ -20,16 +19,17 @@ class ContributorController extends Controller
     public function index(IndexContributorRequest $request): ContributorCollection
     {
         $validated = $request->safe()->only(['page', 'per_page', 'sort']);
-        if (!array_key_exists('per_page', $validated)) {
+        if (! array_key_exists('per_page', $validated)) {
             $validated['per_page'] = 30;
         }
-        if (!array_key_exists('sort', $validated) or $validated['sort'] === '-contributions') {
-                $sortField = 'contributions';
-                $sortOrder = 'desc';
+        if (! array_key_exists('sort', $validated) or $validated['sort'] === '-contributions') {
+            $sortField = 'contributions';
+            $sortOrder = 'desc';
         } else {
             $sortField = 'contributions';
             $sortOrder = 'asc';
         }
+
         return new ContributorCollection(Contributor::orderBy($sortField, $sortOrder)
             ->paginate($validated['per_page']));
     }

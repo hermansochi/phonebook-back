@@ -2,9 +2,9 @@
 
 namespace App\Models\Github;
 
+use App\Traits\Uuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\Uuids;
 
 class Collaborator extends Model
 {
@@ -22,7 +22,7 @@ class Collaborator extends Model
         'type',
         'site_admin',
         'permissions',
-        'role_name'
+        'role_name',
     ];
 
     protected $casts = [

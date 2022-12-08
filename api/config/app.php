@@ -8,15 +8,15 @@ return [
     | Application Settings
     |--------------------------------------------------------------------------
     |
-    | 
-    | 
-    | 
+    |
+    |
+    |
     |
     */
 
     'github_bearer' => env('GITHUB_BEARER'),
     'github_entrypoint' => env('GITHUB_ENTRYPOINT'),
-    
+
     /*
     |--------------------------------------------------------------------------
     | Application Name
