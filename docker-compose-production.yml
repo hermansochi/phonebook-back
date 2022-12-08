@@ -1,190 +1,22 @@
 version: "3.9"
 services:
-    cron:
-        image: crazymax/swarm-cronjob:latest
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
-        environment:
-            LOG_LEVEL: info
-        deploy:
-            placement:
-                constraints: [node.role == manager]
-
-    traefik:
-        image: traefik:2.9
-        command:
-            --providers.docker=true
-            --providers.docker.watch=true
-            --providers.docker.swarmMode=true
-            --providers.docker.exposedByDefault=false
-            --entryPoints.http.address=:80
-            --entryPoints.https.address=:443
-            --certificatesresolvers.letsEncrypt.acme.httpChallenge=true
-            --certificatesresolvers.letsEncrypt.acme.httpChallenge.entryPoint=http
-            --certificatesresolvers.letsEncrypt.acme.email=hermansochi@ya.ru
-            --certificatesresolvers.letsEncrypt.acme.storage=/certs/acme.json
-        ports:
-            - target: 80
-              published: 80
-              protocol: tcp
-              mode: host
-            - target: 443
-              published: 443
-              protocol: tcp
-              mode: host
-        networks:
-            - traefik-public
-        volumes:
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            - traefik-public-certs:/certs
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-
-                - traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)
-                - traefik.http.routers.http-catchall.entryPoints=http
-                - traefik.http.routers.http-catchall.middlewares=redirect-to-https
-                - traefik.http.services.http-catchall.loadBalancer.server.port=80
-
-                - traefik.http.middlewares.redirect-to-https.redirectScheme.scheme=https
-                - traefik.http.middlewares.redirect-to-https.redirectScheme.permanent=true
-
-                - traefik.http.middlewares.secure-headers.headers.sslRedirect=true
-                - traefik.http.middlewares.secure-headers.headers.stsSeconds=31536000
-                - traefik.http.middlewares.secure-headers.headers.contentSecurityPolicy=block-all-mixed-content
-            placement:
-                constraints: [ node.role == manager ]
-
-    frontend:
-        image: ${REGISTRY}/frontend:${IMAGE_TAG}
-        networks:
-            - traefik-public
-            - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-                - traefik.http.routers.frontend.rule=Host(`herman.team`) || Host(`www.herman.team`)
-                - traefik.http.services.frontend.loadBalancer.server.port=80
-                - traefik.http.middlewares.frontend-redirect.redirectRegex.regex=^(https?://)www.herman.team/(.*)$$
-                - traefik.http.middlewares.frontend-redirect.redirectRegex.replacement=$${1}herman.team/$${2}
-                - traefik.http.middlewares.frontend-redirect.redirectRegex.permanent=true
-                - traefik.http.routers.frontend.middlewares=frontend-redirect,secure-headers
-                - traefik.http.routers.frontend.entryPoints=https
-                - traefik.http.routers.frontend.tls=true
-                - traefik.http.routers.frontend.tls.certResolver=letsEncrypt
-            mode: replicated
-            replicas: 1
-            update_config:
-                parallelism: 1
-                delay: 10s
-
-    react:
-        image: ${REGISTRY}/pet-react:${IMAGE_TAG}
-        environment:
-            NODE_ENV: production
-            REACT_APP_API_URL: https://api.herman.team/api
-            REACT_APP_API_VER: v1
-            REACT_APP_AUTH_URL: https://api.herman.team
-            REACT_APP_AVATARS: https://storage.herman.team/pet/avatars/
-        networks:
-            - traefik-public
-            - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-                - traefik.http.routers.react.rule=Host(`react.herman.team`)
-                - traefik.http.services.react.loadBalancer.server.port=80
-                - traefik.http.middlewares.react-redirect.redirectRegex.regex=^(https?://)www.react.herman.team/(.*)$$
-                - traefik.http.middlewares.react-redirect.redirectRegex.replacement=$${1}react.herman.team/$${2}
-                - traefik.http.middlewares.react-redirect.redirectRegex.permanent=true
-                - traefik.http.routers.react.middlewares=react-redirect,secure-headers
-                - traefik.http.routers.react.entrypoints=https
-                - traefik.http.routers.react.tls=true
-                - traefik.http.routers.react.tls.certResolver=letsEncrypt
-            mode: replicated
-            replicas: 1
-            update_config:
-                parallelism: 1
-                delay: 10s
-
-    underdante:
-        image: ${REGISTRY}/pet-underdante:${IMAGE_TAG}
-        environment:
-            NODE_ENV: production
-            REACT_APP_API_URL: https://api.herman.team/api
-            REACT_APP_API_VER: v1
-            REACT_APP_AUTH_URL: https://api.herman.team
-            REACT_APP_AVATARS: https://storage.herman.team/pet/avatars/
-        networks:
-            - traefik-public
-            - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-                - traefik.http.routers.underdante.rule=Host(`underdante.herman.team`)
-                - traefik.http.services.underdante.loadBalancer.server.port=80
-                - traefik.http.middlewares.underdante-redirect.redirectRegex.regex=^(https?://)www.underdante.herman.team/(.*)$$
-                - traefik.http.middlewares.underdante-redirect.redirectRegex.replacement=$${1}underdante.herman.team/$${2}
-                - traefik.http.middlewares.underdante-redirect.redirectRegex.permanent=true
-                - traefik.http.routers.underdante.middlewares=underdante-redirect,secure-headers
-                - traefik.http.routers.underdante.entrypoints=https
-                - traefik.http.routers.underdante.tls=true
-                - traefik.http.routers.underdante.tls.certResolver=letsEncrypt
-            mode: replicated
-            replicas: 1
-            update_config:
-                parallelism: 1
-                delay: 10s
-
-    vue:
-        image: ${REGISTRY}/pet-vue:${IMAGE_TAG}
-        environment:
-            NODE_ENV: production
-            REACT_APP_API_URL: https://api.herman.team/api
-            REACT_APP_API_VER: v1
-            REACT_APP_AUTH_URL: https://api.herman.team
-            REACT_APP_AVATARS: https://storage.herman.team/pet/avatars/
-        networks:
-            - traefik-public
-            - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-                - traefik.http.routers.vue.rule=Host(`vue.herman.team`)
-                - traefik.http.services.vue.loadBalancer.server.port=80
-                - traefik.http.middlewares.vue-redirect.redirectRegex.regex=^(https?://)www.vue.herman.team/(.*)$$
-                - traefik.http.middlewares.vue-redirect.redirectRegex.replacement=$${1}vue.herman.team/$${2}
-                - traefik.http.middlewares.vue-redirect.redirectRegex.permanent=true
-                - traefik.http.routers.vue.middlewares=vue-redirect,secure-headers
-                - traefik.http.routers.vue.entrypoints=https
-                - traefik.http.routers.vue.tls=true
-                - traefik.http.routers.vue.tls.certResolver=letsEncrypt
-            mode: replicated
-            replicas: 1
-            update_config:
-                parallelism: 1
-                delay: 10s
-
     api:
-        image: ${REGISTRY}/pet-api:${IMAGE_TAG}
+        image: ${REGISTRY}/herman-team-api:${IMAGE_TAG}
         networks:
             - traefik-public
-            - default
         deploy:
             labels:
                 - traefik.enable=true
                 - traefik.docker.network=traefik-public
-                - traefik.http.routers.api.rule=Host(`api.herman.team`)
-                - traefik.http.services.api.loadBalancer.server.port=80
-                - traefik.http.routers.api.middlewares=secure-headers
-                - traefik.http.routers.api.entryPoints=https
-                - traefik.http.routers.api.tls=true
-                - traefik.http.routers.api.tls.certResolver=letsEncrypt
+                - traefik.constraint-label=traefik-public
+                - traefik.http.routers.api-http.rule=Host(`api.herman.team`)
+                - traefik.http.routers.api-http.entrypoints=http
+                - traefik.http.routers.api-http.middlewares=https-redirect
+                - traefik.http.routers.api-https.rule=Host(`api.herman.team`)
+                - traefik.http.routers.api-https.entrypoints=https
+                - traefik.http.routers.api-https.tls=true
+                - traefik.http.routers.api-https.tls.certresolver=le
+                - traefik.http.services.api.loadbalancer.server.port=80
             mode: replicated
             replicas: 1
             update_config:
@@ -193,8 +25,8 @@ services:
             placement:
                 constraints: [node.role == manager]
 
-    api-php-fpm:
-        image: ${REGISTRY}/api-php-fpm:${IMAGE_TAG}
+    php-fpm:
+        image: ${REGISTRY}/php-fpm:${IMAGE_TAG}
         deploy:
             mode: replicated
             replicas: 1
@@ -203,8 +35,8 @@ services:
                 delay: 5s
 
     appinit:
-        image: ${REGISTRY}/api-php-cli:${IMAGE_TAG}
-        command: sh -c 'wait-for-it api-postgres:5432 -t 60 && php artisan migrate:fresh && php artisan db:seed && php artisan avatar:add && php artisan route:cache && php artisan config:cache'
+        image: ${REGISTRY}/appinit:${IMAGE_TAG}
+        command: sh -c 'wait-for-it api-postgres:5432 -t 60 && php artisan migrate:fresh && php artisan github:get && php artisan route:cache && php artisan config:cache && php artisan schedule:work'
         deploy:
             restart_policy:
                 condition: on-failure
@@ -238,7 +70,6 @@ services:
             - minio-storage:/data
         networks:
             - traefik-public
-            - default
         deploy:
             labels:
                 - traefik.enable=true
@@ -275,33 +106,6 @@ services:
         entrypoint: /bin/sh -c "/usr/bin/mc alias set myminio http://minio:9000 local secret123456 && /usr/bin/mc mb myminio/pet && /usr/bin/mc anonymous set download myminio/pet"
         networks:
             - traefik-public
-            - default
-
-    password:
-        image: ${REGISTRY}/password-react:1
-        environment:
-            NODE_ENV: production
-        networks:
-            - traefik-public
-            - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.docker.network=traefik-public
-                - traefik.http.routers.password.rule=Host(`pwd.herman.team`)
-                - traefik.http.services.password.loadBalancer.server.port=80
-                - traefik.http.middlewares.password-redirect.redirectRegex.regex=^(https?://)www.pwd.herman.team/(.*)$$
-                - traefik.http.middlewares.password-redirect.redirectRegex.replacement=$${1}pwd.herman.team/$${2}
-                - traefik.http.middlewares.password-redirect.redirectRegex.permanent=true
-                - traefik.http.routers.password.middlewares=password-redirect,secure-headers
-                - traefik.http.routers.password.entrypoints=https
-                - traefik.http.routers.password.tls=true
-                - traefik.http.routers.password.tls.certResolver=letsEncrypt
-            mode: replicated
-            replicas: 1
-            update_config:
-                parallelism: 1
-                delay: 10s
 
 secrets:
     api_db_password:
@@ -314,4 +118,4 @@ volumes:
 
 networks:
     traefik-public:
-        name: traefik-public
+        external: true

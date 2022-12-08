@@ -1,28 +1,30 @@
 FROM php:8.1-cli-alpine AS builder
 
-RUN apk add --no-cache postgresql-dev \
+#RUN apk add --no-cache postgresql-dev \
+#    && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
+#    && docker-php-ext-install pdo_pgsql opcache
+
+#RUN apk add --no-cache \
+#      freetype \
+#      libjpeg-turbo \
+#      libpng \
+#      freetype-dev \
+#      libjpeg-turbo-dev \
+#      libpng-dev \
+#    && docker-php-ext-configure gd \
+#      --with-freetype=/usr/include/ \
+#      --with-jpeg=/usr/include/ \
+#    && docker-php-ext-install -j$(nproc) gd \
+#    && docker-php-ext-enable gd \
+#    && apk del --no-cache \
+#      freetype-dev \
+#      libjpeg-turbo-dev \
+#      libpng-dev \
+#    && rm -rf /tmp/*
+
+RUN apk add --no-cache unzip postgresql-dev bash coreutils \
     && docker-php-ext-configure pgsql -with-pgsql=/usr/local/pgsql \
-    && docker-php-ext-install pdo_pgsql opcache
-
-RUN apk add --no-cache unzip
-
-RUN apk add --no-cache \
-      freetype \
-      libjpeg-turbo \
-      libpng \
-      freetype-dev \
-      libjpeg-turbo-dev \
-      libpng-dev \
-    && docker-php-ext-configure gd \
-      --with-freetype=/usr/include/ \
-      --with-jpeg=/usr/include/ \
-    && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-enable gd \
-    && apk del --no-cache \
-      freetype-dev \
-      libjpeg-turbo-dev \
-      libpng-dev \
-    && rm -rf /tmp/*
+    && docker-php-ext-install pdo_pgsql
 
 ENV COMPOSER_ALLOW_SUPERUSER 1
 

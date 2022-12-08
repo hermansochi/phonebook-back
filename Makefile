@@ -79,8 +79,8 @@ build: build-api
 
 build-api:
 	docker --log-level=debug build --pull --file=docker/production/nginx/Dockerfile --tag=${REGISTRY}/herman-team-api:${IMAGE_TAG} api
-	docker --log-level=debug build --pull --file=docker/production/php-fpm/Dockerfile --tag=${REGISTRY}/api-php-fpm:${IMAGE_TAG} api
-	docker --log-level=debug build --pull --file=docker/production/php-cli/Dockerfile --tag=${REGISTRY}/api-php-cli:${IMAGE_TAG} api
+	docker --log-level=debug build --pull --file=docker/production/php-fpm/Dockerfile --tag=${REGISTRY}/php-fpm:${IMAGE_TAG} api
+	docker --log-level=debug build --pull --file=docker/production/php-cli/Dockerfile --tag=${REGISTRY}/appinit:${IMAGE_TAG} api
 
 try-build:
 	REGISTRY=localhost IMAGE_TAG=0 make build
@@ -89,8 +89,8 @@ push: push-api
 
 push-api:
 	docker push ${REGISTRY}/herman-team-api:${IMAGE_TAG}
-	docker push ${REGISTRY}/api-php-fpm:${IMAGE_TAG}
-	docker push ${REGISTRY}/api-php-cli:${IMAGE_TAG}
+	docker push ${REGISTRY}/php-fpm:${IMAGE_TAG}
+	docker push ${REGISTRY}/appinit:${IMAGE_TAG}
 
 #deploy:
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'rm -rf site_${BUILD_NUMBER} && mkdir site_${BUILD_NUMBER}'
