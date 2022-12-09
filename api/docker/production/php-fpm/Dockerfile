@@ -35,8 +35,9 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/bin --fil
 WORKDIR /app
 
 COPY ./composer.json ./composer.lock ./
+COPY ./.env.prod ./.env
 
-RUN composer install --no-dev --prefer-dist --no-progress --optimize-autoloader --no-scripts \
+RUN composer install --quiet --no-dev --prefer-dist --no-progress --optimize-autoloader --no-scripts \
     && rm -rf /root/.composer/cache
 
 ### FPM ###
@@ -57,6 +58,9 @@ WORKDIR /app
 
 COPY --from=builder /app ./
 COPY ./ ./
+COPY ./.env.prod ./.env
+
+RUN cat ./.env
 
 RUN chmod -R ug+rwx storage bootstrap/cache
 

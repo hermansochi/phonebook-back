@@ -94,6 +94,8 @@ push-api:
 	docker push ${REGISTRY}/appinit:${IMAGE_TAG}
 
 deploy:
+	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'docker network create --driver=overlay --attachable traefik-public || true'
+	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'docker node update --label-add back.manager=true $$(docker info -f "{{.Swarm.NodeID}}")'
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'rm -rf back_${BUILD_NUMBER} && mkdir back_${BUILD_NUMBER}'
 	envsubst < docker-compose-production.yml > docker-compose-production-env.yml
 	scp -o StrictHostKeyChecking=no -P ${PORT} docker-compose-production-env.yml deploy@${HOST}:back_${BUILD_NUMBER}/docker-compose.yml
