@@ -103,6 +103,7 @@ deploy:
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'mkdir back_${BUILD_NUMBER}/secrets'
 	scp -o StrictHostKeyChecking=no -P ${PORT} ${API_DB_PASSWORD_FILE} deploy@${HOST}:back_${BUILD_NUMBER}/secrets/api_db_password
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'cd back_${BUILD_NUMBER} && docker stack deploy  --compose-file docker-compose.yml server --with-registry-auth --prune'
+	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'cd back_${BUILD_NUMBER} && docker service update --force --with-registry-auth server_appinit'
 
 deploy-clean:
 	rm -f docker-compose-production-env.yml
