@@ -67,7 +67,7 @@ api-migrations:
 	docker compose run --rm php-cli php artisan github:get
 
 api-fixtures:
-#	docker compose run --rm php-cli php artisan db:seed
+	docker compose run --rm php-cli php artisan db:seed
 #	docker compose run --rm php-cli php artisan avatar:add
 
 api-generate-docs:
