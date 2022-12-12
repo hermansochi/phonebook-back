@@ -8,7 +8,9 @@ return [
     | Application Settings
     |--------------------------------------------------------------------------
     |
-    |
+    | By hermansochi
+    | APP_EMPLOYEES_TOTAL How many employees to create
+    | APP_EMPLOYEES_PER_PAGE How much to give to the api per page
     |
     |
     |
@@ -16,6 +18,8 @@ return [
 
     'github_bearer' => env('GITHUB_BEARER'),
     'github_entrypoint' => env('GITHUB_ENTRYPOINT'),
+    'employees_total' => (int) env('APP_EMPLOYEES_TOTAL', 1000),
+    'employees_per_page' => (int) env('APP_EMPLOYEES_PER_PAGE', 100),
 
     /*
     |--------------------------------------------------------------------------
@@ -121,7 +125,7 @@ return [
     |
     */
 
-    'faker_locale' => 'en_US',
+    'faker_locale' => 'ru_RU',
 
     /*
     |--------------------------------------------------------------------------
