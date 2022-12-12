@@ -8,3 +8,4 @@
 /api/.env.prod
 /api/.env
 /api/docker/secrets
+minio.env

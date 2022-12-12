@@ -71,6 +71,7 @@ services:
             MINIO_ROOT_USER: local
             MINIO_ROOT_PASSWORD: secret123456
             MINIO_BROWSER_REDIRECT_URL: http://console.storage.localhost
+            MINIO_DEFAULT_BUCKETS: 'team:anonymous download'
         volumes:
             - minio-storage:/data
         networks:
@@ -97,8 +98,6 @@ services:
 
     mc-service:
         image: minio/mc
-        networks:
-            - default
         depends_on:
             minio:
                 condition: service_healthy
@@ -110,7 +109,8 @@ services:
             /usr/bin/mc anonymous set download myminio/pet;
             exit 0;
             "
-
+        networks:
+            - default
 
 volumes:
     api-postgres:

@@ -60,8 +60,6 @@ COPY --from=builder /app ./
 COPY ./ ./
 COPY ./.env.prod ./.env
 
-RUN cat ./.env
-
 RUN chmod -R ug+rwx storage bootstrap/cache
 
 HEALTHCHECK --interval=5s --timeout=3s --start-period=1s \

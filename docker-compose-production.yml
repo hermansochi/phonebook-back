@@ -41,7 +41,7 @@ services:
 
     appinit:
         image: ${REGISTRY}/appinit:${IMAGE_TAG}
-        command: sh -c 'wait-for-it api-postgres:5432 -t 60 && php artisan migrate:fresh && php artisan github:get && php artisan route:cache && php artisan config:cache && php artisan schedule:work'
+        command: sh -c 'wait-for-it api-postgres:5432 -t 60 && php artisan migrate:fresh --force && php artisan github:get && php artisan route:cache && php artisan config:cache && php artisan schedule:work'
         deploy:
             restart_policy:
                 condition: on-failure
@@ -71,35 +71,40 @@ services:
 
     minio:
         image: minio/minio:RELEASE.2022-10-21T22-37-48Z
-        command: server --console-address ":9001" /data
-        environment:
-            MINIO_ROOT_USER: local
-            MINIO_ROOT_PASSWORD: secret123456
-            MINIO_BROWSER_REDIRECT_URL: https://console.storage.herman.team
+        env_file: minio.env
+        command: minio server --console-address ":9001" /data
         volumes:
             - minio-storage:/data
         networks:
             - traefik-public
-            - default
         deploy:
             labels:
+
                 - traefik.enable=true
                 - traefik.docker.network=traefik-public
-                # Console
-                - traefik.http.routers.storage-console.rule=Host(`console.storage.herman.team`)
-                - traefik.http.routers.storage-console.entrypoints=https
-                - traefik.http.routers.storage-console.service=storage-console
-                - traefik.http.services.storage-console.loadbalancer.server.port=9001
-                - traefik.http.routers.storage-console.tls=true
-                - traefik.http.routers.storage-console.tls.certResolver=letsEncrypt
-                # APi
-                - traefik.http.routers.storage.rule=Host(`storage.herman.team`)
-                - traefik.http.routers.storage.entrypoints=https
-                - traefik.http.routers.storage.service=storage
-                - traefik.http.services.storage.loadbalancer.server.port=9000
-                - traefik.http.routers.storage.tls=true
-                - traefik.http.routers.storage.tls.certResolver=letsEncrypt
-            mode: replicated
+                - traefik.constraint-label=traefik-public
+                #- traefik.http.middlewares.redirect-https.redirectScheme.scheme=https
+                #- traefik.http.middlewares.redirect-https.redirectScheme.permanent=true
+
+                - traefik.http.routers.minio-https.rule=Host(`storage.herman.team`)
+                - traefik.http.routers.minio-https.entrypoints=https
+                - traefik.http.routers.minio-https.service=minio
+                - traefik.http.routers.minio-http.rule=Host(`storage.herman.team`)
+                - traefik.http.routers.minio-http.entrypoints=http
+                - traefik.http.routers.minio-http.middlewares=https-redirect
+                - traefik.http.routers.minio-http.service=minio
+                - traefik.http.services.minio.loadbalancer.server.port=9000
+
+                - traefik.http.routers.minio-console-https.rule=Host(`console.storage.herman.team`)
+                - traefik.http.routers.minio-console-https.entrypoints=https
+                - traefik.http.routers.minio-console-https.service=minio-console
+                - traefik.http.routers.minio-console-http.rule=Host(`console.storage.herman.team`)
+                - traefik.http.routers.minio-console-http.entrypoints=http
+                - traefik.http.routers.minio-console-http.middlewares=https-redirect
+                - traefik.http.routers.minio-console-http.service=minio-console
+                - traefik.http.services.minio-console.loadbalancer.server.port=9001
+
+
             replicas: 1
             update_config:
                 parallelism: 1
@@ -116,8 +121,14 @@ services:
     mc-service:
         image: minio/mc
         networks:
-            - default
-        entrypoint: /bin/sh -c "/usr/bin/mc alias set myminio http://minio:9000 local secret123456 && /usr/bin/mc mb myminio/pet && /usr/bin/mc anonymous set download myminio/pet"
+            - traefik-public
+        entrypoint: >
+            /bin/sh -c "
+            /usr/bin/mc alias set myminio http://minio:9000 local secret123456;
+            /usr/bin/mc mb myminio/pet;
+            /usr/bin/mc anonymous set download myminio/pet;
+            exit 0;
+            "
         deploy:
             placement:
                 constraints: 

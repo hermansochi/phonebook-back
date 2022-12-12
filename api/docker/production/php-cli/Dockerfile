@@ -62,8 +62,6 @@ COPY --from=builder /app ./
 COPY ./ ./
 COPY ./.env.prod ./.env
 
-RUN cat ./.env
-
 RUN chmod -R ug+rwx storage bootstrap/cache
 
 USER app
