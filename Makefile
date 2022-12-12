@@ -101,8 +101,10 @@ deploy:
 	scp -o StrictHostKeyChecking=no -P ${PORT} docker-compose-production-env.yml deploy@${HOST}:back_${BUILD_NUMBER}/docker-compose.yml
 	rm -f docker-compose-production-env.yml
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'mkdir back_${BUILD_NUMBER}/secrets'
-	scp -o StrictHostKeyChecking=no -P ${PORT} ${API_DB_PASSWORD_FILE} deploy@${HOST}:back_${BUILD_NUMBER}/secrets/api_db_password
-	scp -o StrictHostKeyChecking=no -P ${PORT} minio.env deploy@${HOST}:back_${BUILD_NUMBER}/minio.env
+	scp -o StrictHostKeyChecking=no -P ${PORT} api/docker/secrets/api_db_password deploy@${HOST}:back_${BUILD_NUMBER}/secrets/api_db_password
+	scp -o StrictHostKeyChecking=no -P ${PORT} api/docker/secrets/minio_secret_key deploy@${HOST}:back_${BUILD_NUMBER}/secrets/minio_secret_key
+	scp -o StrictHostKeyChecking=no -P ${PORT} api/docker/secrets/minio_access_key deploy@${HOST}:back_${BUILD_NUMBER}/secrets/minio_access_key
+	scp -o StrictHostKeyChecking=no -P ${PORT} api/docker/secrets/minio.env deploy@${HOST}:back_${BUILD_NUMBER}/minio.env
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'cd back_${BUILD_NUMBER} && docker stack deploy  --compose-file docker-compose.yml server --with-registry-auth --prune'
 	ssh -o StrictHostKeyChecking=no deploy@${HOST} -p ${PORT} 'cd back_${BUILD_NUMBER} && docker service update --force --with-registry-auth server_appinit'
 
