@@ -63,12 +63,12 @@ api-wait-db:
 	docker compose run --rm php-cli wait-for-it api-postgres:5432 -t 30
 
 api-migrations:
-	docker compose run --rm php-cli php artisan migrate:fresh
+	docker compose run --rm php-cli php artisan migrate
 	docker compose run --rm php-cli php artisan github:get
 
 api-fixtures:
 	docker compose run --rm php-cli php artisan db:seed
-#	docker compose run --rm php-cli php artisan avatar:add
+	docker compose run --rm php-cli php artisan avatar:add
 
 api-generate-docs:
 #	mkdir -p ${PWD}/api/.scribe/endpoints/ && cp ${PWD}/docs/scribe/* ${PWD}/api/.scribe/endpoints/

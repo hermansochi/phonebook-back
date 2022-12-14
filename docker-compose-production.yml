@@ -41,7 +41,16 @@ services:
 
     appinit:
         image: ${REGISTRY}/appinit:${IMAGE_TAG}
-        command: sh -c 'wait-for-it api-postgres:5432 -t 60 && php artisan migrate:fresh --force && php artisan github:get && php artisan route:cache && php artisan config:cache && php artisan schedule:work'
+        command: >
+            sh -c '
+            wait-for-it api-postgres:5432 -t 60;
+            php artisan migrate --force;
+            php artisan db:seed --force;
+            php artisan avatar:add;
+            php artisan github:get;
+            php artisan route:cache;
+            php artisan config:cache;
+            php artisan schedule:work;'
         deploy:
             restart_policy:
                 condition: on-failure
