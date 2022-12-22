@@ -19,3 +19,4 @@ yarn-error.log
 /.scribe
 /resources/views/scribe
 /reports
+.DS_Store

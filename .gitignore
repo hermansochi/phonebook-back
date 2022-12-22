@@ -9,3 +9,4 @@
 /api/.env
 /api/docker/secrets
 minio.env
+.DS_Store
